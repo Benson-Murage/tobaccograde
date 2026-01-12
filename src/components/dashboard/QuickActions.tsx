@@ -20,7 +20,7 @@ const actions = [
   {
     name: "Scan Bale",
     description: "Scan QR/Barcode",
-    href: "/grading/scan",
+    href: "/scan",
     icon: Scan,
     primary: false,
   },

@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import GradingPage from "./pages/GradingPage";
 import FarmersPage from "./pages/FarmersPage";
 import BalesPage from "./pages/BalesPage";
+import BaleRegistrationPage from "./pages/BaleRegistrationPage";
+import ScanPage from "./pages/ScanPage";
 import DisputesPage from "./pages/DisputesPage";
 import PricingPage from "./pages/PricingPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -25,8 +27,11 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/grading" element={<GradingPage />} />
+          <Route path="/grading/scan" element={<ScanPage />} />
           <Route path="/farmers" element={<FarmersPage />} />
           <Route path="/bales" element={<BalesPage />} />
+          <Route path="/bales/new" element={<BaleRegistrationPage />} />
+          <Route path="/scan" element={<ScanPage />} />
           <Route path="/disputes" element={<DisputesPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/reports" element={<ReportsPage />} />
