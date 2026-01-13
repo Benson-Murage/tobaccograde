@@ -14,16 +14,1079 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string
+          device_fingerprint: string | null
+          device_id: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: unknown
+          new_values: Json | null
+          old_values: Json | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_id?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: unknown
+          new_values?: Json | null
+          old_values?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: unknown
+          new_values?: Json | null
+          old_values?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bales: {
+        Row: {
+          bale_code: string
+          batch_number: string | null
+          company_id: string
+          created_at: string
+          device_id: string | null
+          farmer_id: string
+          id: string
+          lot_number: string | null
+          qr_code: string | null
+          registered_at: string
+          registered_by: string | null
+          season_id: string | null
+          status: Database["public"]["Enums"]["bale_status"] | null
+          sync_status: Database["public"]["Enums"]["sync_status"] | null
+          synced_at: string | null
+          updated_at: string
+          warehouse_id: string
+          weight_kg: number
+        }
+        Insert: {
+          bale_code: string
+          batch_number?: string | null
+          company_id: string
+          created_at?: string
+          device_id?: string | null
+          farmer_id: string
+          id?: string
+          lot_number?: string | null
+          qr_code?: string | null
+          registered_at?: string
+          registered_by?: string | null
+          season_id?: string | null
+          status?: Database["public"]["Enums"]["bale_status"] | null
+          sync_status?: Database["public"]["Enums"]["sync_status"] | null
+          synced_at?: string | null
+          updated_at?: string
+          warehouse_id: string
+          weight_kg: number
+        }
+        Update: {
+          bale_code?: string
+          batch_number?: string | null
+          company_id?: string
+          created_at?: string
+          device_id?: string | null
+          farmer_id?: string
+          id?: string
+          lot_number?: string | null
+          qr_code?: string | null
+          registered_at?: string
+          registered_by?: string | null
+          season_id?: string | null
+          status?: Database["public"]["Enums"]["bale_status"] | null
+          sync_status?: Database["public"]["Enums"]["sync_status"] | null
+          synced_at?: string | null
+          updated_at?: string
+          warehouse_id?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bales_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bales_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bales_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bales_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: string | null
+          code: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          license_expires_at: string | null
+          license_type: string | null
+          logo_url: string | null
+          max_graders: number | null
+          max_warehouses: number | null
+          name: string
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          license_expires_at?: string | null
+          license_type?: string | null
+          logo_url?: string | null
+          max_graders?: number | null
+          max_warehouses?: number | null
+          name: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          license_expires_at?: string | null
+          license_type?: string | null
+          logo_url?: string | null
+          max_graders?: number | null
+          max_warehouses?: number | null
+          name?: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      devices: {
+        Row: {
+          company_id: string
+          created_at: string
+          device_id: string
+          device_name: string | null
+          device_type: string | null
+          fingerprint: string | null
+          id: string
+          is_trusted: boolean | null
+          last_sync_at: string | null
+          trusted_at: string | null
+          trusted_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          device_id: string
+          device_name?: string | null
+          device_type?: string | null
+          fingerprint?: string | null
+          id?: string
+          is_trusted?: boolean | null
+          last_sync_at?: string | null
+          trusted_at?: string | null
+          trusted_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          device_id?: string
+          device_name?: string | null
+          device_type?: string | null
+          fingerprint?: string | null
+          id?: string
+          is_trusted?: boolean | null
+          last_sync_at?: string | null
+          trusted_at?: string | null
+          trusted_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disputes: {
+        Row: {
+          company_id: string
+          created_at: string
+          evidence_urls: string[] | null
+          grading_id: string
+          id: string
+          new_grade_code: string | null
+          priority: string | null
+          raised_at: string
+          raised_by: string
+          reason: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["dispute_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          evidence_urls?: string[] | null
+          grading_id: string
+          id?: string
+          new_grade_code?: string | null
+          priority?: string | null
+          raised_at?: string
+          raised_by: string
+          reason: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["dispute_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          evidence_urls?: string[] | null
+          grading_id?: string
+          id?: string
+          new_grade_code?: string | null
+          priority?: string | null
+          raised_at?: string
+          raised_by?: string
+          reason?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["dispute_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_grading_id_fkey"
+            columns: ["grading_id"]
+            isOneToOne: false
+            referencedRelation: "gradings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      farmers: {
+        Row: {
+          bank_account: string | null
+          company_id: string
+          contract_end_date: string | null
+          contract_number: string | null
+          contract_start_date: string | null
+          created_at: string
+          email: string | null
+          farm_location: string | null
+          farmer_code: string
+          full_name: string
+          gps_coordinates: unknown
+          id: string
+          is_active: boolean | null
+          mobile_money_number: string | null
+          national_id: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_account?: string | null
+          company_id: string
+          contract_end_date?: string | null
+          contract_number?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          email?: string | null
+          farm_location?: string | null
+          farmer_code: string
+          full_name: string
+          gps_coordinates?: unknown
+          id?: string
+          is_active?: boolean | null
+          mobile_money_number?: string | null
+          national_id?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_account?: string | null
+          company_id?: string
+          contract_end_date?: string | null
+          contract_number?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          email?: string | null
+          farm_location?: string | null
+          farmer_code?: string
+          full_name?: string
+          gps_coordinates?: unknown
+          id?: string
+          is_active?: boolean | null
+          mobile_money_number?: string | null
+          national_id?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grading_prices: {
+        Row: {
+          calculated_at: string
+          currency: string | null
+          grading_id: string
+          id: string
+          price_matrix_id: string | null
+          total_value: number
+          unit_price: number
+        }
+        Insert: {
+          calculated_at?: string
+          currency?: string | null
+          grading_id: string
+          id?: string
+          price_matrix_id?: string | null
+          total_value: number
+          unit_price: number
+        }
+        Update: {
+          calculated_at?: string
+          currency?: string | null
+          grading_id?: string
+          id?: string
+          price_matrix_id?: string | null
+          total_value?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grading_prices_grading_id_fkey"
+            columns: ["grading_id"]
+            isOneToOne: false
+            referencedRelation: "gradings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grading_prices_price_matrix_id_fkey"
+            columns: ["price_matrix_id"]
+            isOneToOne: false
+            referencedRelation: "price_matrices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grading_rules: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          published_at: string | null
+          published_by: string | null
+          rules: Json
+          season_id: string | null
+          version: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          published_at?: string | null
+          published_by?: string | null
+          rules: Json
+          season_id?: string | null
+          version?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          published_at?: string | null
+          published_by?: string | null
+          rules?: Json
+          season_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grading_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grading_rules_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gradings: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bale_id: string
+          color: string
+          company_id: string
+          confidence_score: number | null
+          created_at: string
+          defect_percent: number | null
+          device_fingerprint: string | null
+          device_id: string | null
+          grade_class: string | null
+          grade_code: string
+          graded_at: string
+          graded_offline: boolean | null
+          grader_id: string
+          grading_rule_id: string | null
+          id: string
+          is_locked: boolean | null
+          leaf_position: string
+          locked_at: string | null
+          locked_by: string | null
+          maturity: string
+          moisture_percent: number | null
+          notes: string | null
+          photo_urls: string[] | null
+          sync_status: Database["public"]["Enums"]["sync_status"] | null
+          synced_at: string | null
+          texture: string
+          uniformity_score: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bale_id: string
+          color: string
+          company_id: string
+          confidence_score?: number | null
+          created_at?: string
+          defect_percent?: number | null
+          device_fingerprint?: string | null
+          device_id?: string | null
+          grade_class?: string | null
+          grade_code: string
+          graded_at?: string
+          graded_offline?: boolean | null
+          grader_id: string
+          grading_rule_id?: string | null
+          id?: string
+          is_locked?: boolean | null
+          leaf_position: string
+          locked_at?: string | null
+          locked_by?: string | null
+          maturity: string
+          moisture_percent?: number | null
+          notes?: string | null
+          photo_urls?: string[] | null
+          sync_status?: Database["public"]["Enums"]["sync_status"] | null
+          synced_at?: string | null
+          texture: string
+          uniformity_score?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bale_id?: string
+          color?: string
+          company_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          defect_percent?: number | null
+          device_fingerprint?: string | null
+          device_id?: string | null
+          grade_class?: string | null
+          grade_code?: string
+          graded_at?: string
+          graded_offline?: boolean | null
+          grader_id?: string
+          grading_rule_id?: string | null
+          id?: string
+          is_locked?: boolean | null
+          leaf_position?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          maturity?: string
+          moisture_percent?: number | null
+          notes?: string | null
+          photo_urls?: string[] | null
+          sync_status?: Database["public"]["Enums"]["sync_status"] | null
+          synced_at?: string | null
+          texture?: string
+          uniformity_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gradings_bale_id_fkey"
+            columns: ["bale_id"]
+            isOneToOne: false
+            referencedRelation: "bales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gradings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gradings_grading_rule_id_fkey"
+            columns: ["grading_rule_id"]
+            isOneToOne: false
+            referencedRelation: "grading_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      license_usage: {
+        Row: {
+          company_id: string
+          id: string
+          metric_type: string
+          metric_value: number
+          recorded_at: string
+          season_id: string | null
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          metric_type: string
+          metric_value: number
+          recorded_at?: string
+          season_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          metric_type?: string
+          metric_value?: number
+          recorded_at?: string
+          season_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_usage_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_usage_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          company_id: string
+          created_at: string
+          currency: string | null
+          farmer_id: string
+          id: string
+          paid_at: string | null
+          payment_reference: string | null
+          season_id: string | null
+          status: string | null
+          total_value: number | null
+          total_weight_kg: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          currency?: string | null
+          farmer_id: string
+          id?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          season_id?: string | null
+          status?: string | null
+          total_value?: number | null
+          total_weight_kg?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          currency?: string | null
+          farmer_id?: string
+          id?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          season_id?: string | null
+          status?: string | null
+          total_value?: number | null
+          total_weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_matrices: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          prices: Json
+          published_at: string | null
+          published_by: string | null
+          season_id: string | null
+          version: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          prices: Json
+          published_at?: string | null
+          published_by?: string | null
+          season_id?: string | null
+          version?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          prices?: Json
+          published_at?: string | null
+          published_by?: string | null
+          season_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_matrices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_matrices_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company_id: string | null
+          created_at: string
+          device_fingerprint: string | null
+          device_id: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          last_login_at: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_id?: string | null
+          email?: string | null
+          full_name: string
+          id: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_id?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seasons: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean | null
+          name: string
+          settings: Json | null
+          start_date: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          settings?: Json | null
+          start_date: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          settings?: Json | null
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_queue: {
+        Row: {
+          company_id: string
+          created_at: string
+          device_id: string
+          entity_id: string
+          entity_type: string
+          id: string
+          last_error: string | null
+          operation: string
+          payload: Json
+          priority: number | null
+          processed_at: string | null
+          retry_count: number | null
+          status: Database["public"]["Enums"]["sync_status"] | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          device_id: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_error?: string | null
+          operation: string
+          payload: Json
+          priority?: number | null
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: Database["public"]["Enums"]["sync_status"] | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          device_id?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_error?: string | null
+          operation?: string
+          payload?: Json
+          priority?: number | null
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: Database["public"]["Enums"]["sync_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          company_id: string | null
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouses: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          gps_coordinates: unknown
+          id: string
+          is_active: boolean | null
+          location: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          gps_coordinates?: unknown
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          gps_coordinates?: unknown
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_access_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      get_user_company_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "super_admin"
+        | "company_admin"
+        | "grader"
+        | "quality_supervisor"
+        | "farmer"
+        | "auditor"
+      bale_status:
+        | "registered"
+        | "pending_grading"
+        | "graded"
+        | "disputed"
+        | "approved"
+        | "paid"
+      dispute_status:
+        | "open"
+        | "under_review"
+        | "resolved"
+        | "escalated"
+        | "closed"
+      sync_status: "pending" | "syncing" | "synced" | "conflict" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +1213,31 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "super_admin",
+        "company_admin",
+        "grader",
+        "quality_supervisor",
+        "farmer",
+        "auditor",
+      ],
+      bale_status: [
+        "registered",
+        "pending_grading",
+        "graded",
+        "disputed",
+        "approved",
+        "paid",
+      ],
+      dispute_status: [
+        "open",
+        "under_review",
+        "resolved",
+        "escalated",
+        "closed",
+      ],
+      sync_status: ["pending", "syncing", "synced", "conflict", "failed"],
+    },
   },
 } as const
