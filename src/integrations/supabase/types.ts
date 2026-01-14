@@ -14,6 +14,302 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_grader_decisions: {
+        Row: {
+          ai_prediction_id: string
+          ai_suggested_grade: string | null
+          color_ai_value: string | null
+          color_decision: string
+          color_final_value: string | null
+          company_id: string
+          created_at: string
+          decision_time_seconds: number | null
+          defects_ai_value: number | null
+          defects_decision: string
+          defects_final_value: number | null
+          final_grade: string
+          grader_id: string
+          grading_id: string
+          id: string
+          leaf_position_ai_value: string | null
+          leaf_position_decision: string
+          leaf_position_final_value: string | null
+          maturity_ai_value: string | null
+          maturity_decision: string
+          maturity_final_value: string | null
+          modification_reason: string | null
+          notes: string | null
+          overall_decision: string
+          texture_ai_value: string | null
+          texture_decision: string
+          texture_final_value: string | null
+        }
+        Insert: {
+          ai_prediction_id: string
+          ai_suggested_grade?: string | null
+          color_ai_value?: string | null
+          color_decision?: string
+          color_final_value?: string | null
+          company_id: string
+          created_at?: string
+          decision_time_seconds?: number | null
+          defects_ai_value?: number | null
+          defects_decision?: string
+          defects_final_value?: number | null
+          final_grade: string
+          grader_id: string
+          grading_id: string
+          id?: string
+          leaf_position_ai_value?: string | null
+          leaf_position_decision?: string
+          leaf_position_final_value?: string | null
+          maturity_ai_value?: string | null
+          maturity_decision?: string
+          maturity_final_value?: string | null
+          modification_reason?: string | null
+          notes?: string | null
+          overall_decision?: string
+          texture_ai_value?: string | null
+          texture_decision?: string
+          texture_final_value?: string | null
+        }
+        Update: {
+          ai_prediction_id?: string
+          ai_suggested_grade?: string | null
+          color_ai_value?: string | null
+          color_decision?: string
+          color_final_value?: string | null
+          company_id?: string
+          created_at?: string
+          decision_time_seconds?: number | null
+          defects_ai_value?: number | null
+          defects_decision?: string
+          defects_final_value?: number | null
+          final_grade?: string
+          grader_id?: string
+          grading_id?: string
+          id?: string
+          leaf_position_ai_value?: string | null
+          leaf_position_decision?: string
+          leaf_position_final_value?: string | null
+          maturity_ai_value?: string | null
+          maturity_decision?: string
+          maturity_final_value?: string | null
+          modification_reason?: string | null
+          notes?: string | null
+          overall_decision?: string
+          texture_ai_value?: string | null
+          texture_decision?: string
+          texture_final_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_grader_decisions_ai_prediction_id_fkey"
+            columns: ["ai_prediction_id"]
+            isOneToOne: false
+            referencedRelation: "ai_predictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_grader_decisions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_grader_decisions_grading_id_fkey"
+            columns: ["grading_id"]
+            isOneToOne: false
+            referencedRelation: "gradings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_models: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string | null
+          config: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          model_type: string
+          name: string
+          provider: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          config?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          model_type?: string
+          name: string
+          provider?: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          config?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          model_type?: string
+          name?: string
+          provider?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_models_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_predictions: {
+        Row: {
+          ai_model_id: string | null
+          company_id: string
+          created_at: string
+          defect_confidence: number | null
+          defect_percentage: number | null
+          detected_defects: Json | null
+          error_message: string | null
+          explanation: string | null
+          grading_id: string | null
+          grading_image_id: string | null
+          id: string
+          key_factors: Json | null
+          overall_confidence: number | null
+          overlay_data: Json | null
+          processing_time_ms: number | null
+          raw_response: Json | null
+          shape_consistency_score: number | null
+          size_variation_score: number | null
+          suggested_color: string | null
+          suggested_color_confidence: number | null
+          suggested_grade: string | null
+          suggested_grade_class: string | null
+          suggested_leaf_position: string | null
+          suggested_leaf_position_confidence: number | null
+          suggested_maturity: string | null
+          suggested_maturity_confidence: number | null
+          suggested_texture: string | null
+          suggested_texture_confidence: number | null
+          uniformity_score: number | null
+        }
+        Insert: {
+          ai_model_id?: string | null
+          company_id: string
+          created_at?: string
+          defect_confidence?: number | null
+          defect_percentage?: number | null
+          detected_defects?: Json | null
+          error_message?: string | null
+          explanation?: string | null
+          grading_id?: string | null
+          grading_image_id?: string | null
+          id?: string
+          key_factors?: Json | null
+          overall_confidence?: number | null
+          overlay_data?: Json | null
+          processing_time_ms?: number | null
+          raw_response?: Json | null
+          shape_consistency_score?: number | null
+          size_variation_score?: number | null
+          suggested_color?: string | null
+          suggested_color_confidence?: number | null
+          suggested_grade?: string | null
+          suggested_grade_class?: string | null
+          suggested_leaf_position?: string | null
+          suggested_leaf_position_confidence?: number | null
+          suggested_maturity?: string | null
+          suggested_maturity_confidence?: number | null
+          suggested_texture?: string | null
+          suggested_texture_confidence?: number | null
+          uniformity_score?: number | null
+        }
+        Update: {
+          ai_model_id?: string | null
+          company_id?: string
+          created_at?: string
+          defect_confidence?: number | null
+          defect_percentage?: number | null
+          detected_defects?: Json | null
+          error_message?: string | null
+          explanation?: string | null
+          grading_id?: string | null
+          grading_image_id?: string | null
+          id?: string
+          key_factors?: Json | null
+          overall_confidence?: number | null
+          overlay_data?: Json | null
+          processing_time_ms?: number | null
+          raw_response?: Json | null
+          shape_consistency_score?: number | null
+          size_variation_score?: number | null
+          suggested_color?: string | null
+          suggested_color_confidence?: number | null
+          suggested_grade?: string | null
+          suggested_grade_class?: string | null
+          suggested_leaf_position?: string | null
+          suggested_leaf_position_confidence?: number | null
+          suggested_maturity?: string | null
+          suggested_maturity_confidence?: number | null
+          suggested_texture?: string | null
+          suggested_texture_confidence?: number | null
+          uniformity_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_predictions_ai_model_id_fkey"
+            columns: ["ai_model_id"]
+            isOneToOne: false
+            referencedRelation: "ai_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_predictions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_predictions_grading_id_fkey"
+            columns: ["grading_id"]
+            isOneToOne: false
+            referencedRelation: "gradings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_predictions_grading_image_id_fkey"
+            columns: ["grading_image_id"]
+            isOneToOne: false
+            referencedRelation: "grading_images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -405,6 +701,230 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fraud_alerts: {
+        Row: {
+          affected_farmers: Json | null
+          affected_gradings: Json | null
+          alert_type: string
+          company_id: string
+          created_at: string
+          description: string
+          evidence: Json | null
+          grader_id: string | null
+          id: string
+          investigated_at: string | null
+          investigated_by: string | null
+          resolution: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_farmers?: Json | null
+          affected_gradings?: Json | null
+          alert_type: string
+          company_id: string
+          created_at?: string
+          description: string
+          evidence?: Json | null
+          grader_id?: string | null
+          id?: string
+          investigated_at?: string | null
+          investigated_by?: string | null
+          resolution?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_farmers?: Json | null
+          affected_gradings?: Json | null
+          alert_type?: string
+          company_id?: string
+          created_at?: string
+          description?: string
+          evidence?: Json | null
+          grader_id?: string | null
+          id?: string
+          investigated_at?: string | null
+          investigated_by?: string | null
+          resolution?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_alerts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grader_analytics: {
+        Row: {
+          ai_accept_rate: number | null
+          ai_modify_rate: number | null
+          ai_reject_rate: number | null
+          avg_deviation_from_ai: number | null
+          company_id: string
+          consistency_score: number | null
+          created_at: string
+          deviation_trend: string | null
+          grade_distribution: Json | null
+          grader_id: string
+          harshness_percentile: number | null
+          harshness_score: number | null
+          id: string
+          pattern_anomalies: Json | null
+          period_end: string
+          period_start: string
+          requires_review: boolean | null
+          risk_factors: Json | null
+          risk_score: number | null
+          total_gradings: number
+          total_with_ai_assist: number
+          updated_at: string
+        }
+        Insert: {
+          ai_accept_rate?: number | null
+          ai_modify_rate?: number | null
+          ai_reject_rate?: number | null
+          avg_deviation_from_ai?: number | null
+          company_id: string
+          consistency_score?: number | null
+          created_at?: string
+          deviation_trend?: string | null
+          grade_distribution?: Json | null
+          grader_id: string
+          harshness_percentile?: number | null
+          harshness_score?: number | null
+          id?: string
+          pattern_anomalies?: Json | null
+          period_end: string
+          period_start: string
+          requires_review?: boolean | null
+          risk_factors?: Json | null
+          risk_score?: number | null
+          total_gradings?: number
+          total_with_ai_assist?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_accept_rate?: number | null
+          ai_modify_rate?: number | null
+          ai_reject_rate?: number | null
+          avg_deviation_from_ai?: number | null
+          company_id?: string
+          consistency_score?: number | null
+          created_at?: string
+          deviation_trend?: string | null
+          grade_distribution?: Json | null
+          grader_id?: string
+          harshness_percentile?: number | null
+          harshness_score?: number | null
+          id?: string
+          pattern_anomalies?: Json | null
+          period_end?: string
+          period_start?: string
+          requires_review?: boolean | null
+          risk_factors?: Json | null
+          risk_score?: number | null
+          total_gradings?: number
+          total_with_ai_assist?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grader_analytics_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grading_images: {
+        Row: {
+          bale_id: string | null
+          capture_metadata: Json | null
+          captured_at: string
+          company_id: string
+          created_at: string
+          device_id: string | null
+          grader_id: string | null
+          grading_id: string | null
+          id: string
+          image_type: string
+          image_url: string
+          thumbnail_url: string | null
+        }
+        Insert: {
+          bale_id?: string | null
+          capture_metadata?: Json | null
+          captured_at?: string
+          company_id: string
+          created_at?: string
+          device_id?: string | null
+          grader_id?: string | null
+          grading_id?: string | null
+          id?: string
+          image_type?: string
+          image_url: string
+          thumbnail_url?: string | null
+        }
+        Update: {
+          bale_id?: string | null
+          capture_metadata?: Json | null
+          captured_at?: string
+          company_id?: string
+          created_at?: string
+          device_id?: string | null
+          grader_id?: string | null
+          grading_id?: string | null
+          id?: string
+          image_type?: string
+          image_url?: string
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grading_images_bale_id_fkey"
+            columns: ["bale_id"]
+            isOneToOne: false
+            referencedRelation: "bales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grading_images_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grading_images_grading_id_fkey"
+            columns: ["grading_id"]
+            isOneToOne: false
+            referencedRelation: "gradings"
             referencedColumns: ["id"]
           },
         ]
