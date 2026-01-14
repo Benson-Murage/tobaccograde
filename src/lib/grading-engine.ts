@@ -178,7 +178,7 @@ function evaluateCondition(params: GradingParameters, condition: RuleCondition):
     case 'lte':
       return typeof value === 'number' && value <= (condition.value as number);
     case 'in':
-      return Array.isArray(condition.value) && condition.value.includes(value as string);
+      return Array.isArray(condition.value) && (condition.value as string[]).includes(value as string);
     case 'between':
       if (Array.isArray(condition.value) && condition.value.length === 2) {
         const [min, max] = condition.value as [number, number];
