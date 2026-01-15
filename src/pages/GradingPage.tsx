@@ -1,8 +1,8 @@
 /**
  * AI-Assisted Tobacco Grading Page
  * 
- * Human-in-the-loop grading with AI suggestions.
- * Graders review, accept, modify, or reject AI outputs.
+ * Hardware-first workflow with human-in-the-loop AI grading.
+ * Manual entry only when devices unavailable.
  */
 
 import { useState, useMemo, useCallback } from "react";
@@ -10,12 +10,16 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AIAnalysisPanel, type AISuggestion, type AIDecision, type Decision } from "@/components/grading/AIAnalysisPanel";
 import { PriceBreakdownCard } from "@/components/grading/PriceBreakdownCard";
 import { ImageCaptureGuidance, type CaptureMetadata } from "@/components/grading/ImageCaptureGuidance";
+import { HardwareGradingWorkflow } from "@/components/hardware/HardwareGradingWorkflow";
+import { AuditRiskBadge } from "@/components/hardware/AuditRiskBadge";
+import { type DeviceReading } from "@/lib/hardware-devices";
 import {
   LEAF_POSITIONS,
   TOBACCO_COLORS,
@@ -44,7 +48,12 @@ import {
   AlertTriangle,
   Brain,
   X,
+  Bluetooth,
+  Pencil,
 } from "lucide-react";
+
+// Workflow step type
+type WorkflowStep = 'hardware' | 'grading';
 
 // Mock bale data
 const currentBale = {
@@ -58,10 +67,17 @@ const currentBale = {
 };
 
 export default function GradingPage() {
+  const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('hardware');
   const [searchQuery, setSearchQuery] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Hardware workflow data
+  const [hardwareWeight, setHardwareWeight] = useState<DeviceReading<number> | null>(null);
+  const [hardwareMoisture, setHardwareMoisture] = useState<DeviceReading<number> | null>(null);
+  const [auditRiskScore, setAuditRiskScore] = useState<number>(0);
+  const [requiresSupervisorApproval, setRequiresSupervisorApproval] = useState(false);
   
   // AI suggestions and decisions
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
@@ -77,6 +93,7 @@ export default function GradingPage() {
   const [maturity, setMaturity] = useState<TobaccoMaturity | null>(null);
   const [moisturePercent, setMoisturePercent] = useState<number | null>(null);
   const [defectPercent, setDefectPercent] = useState<number | null>(null);
+
 
   // Handle AI decision
   const handleAIDecision = useCallback((attribute: string, decision: Decision, finalValue?: string) => {
@@ -245,6 +262,46 @@ export default function GradingPage() {
     low: "bg-warning text-warning-foreground",
     rejected: "bg-destructive text-destructive-foreground",
   };
+
+  // Handle hardware workflow completion
+  const handleHardwareComplete = (data: {
+    bale: { id: string; code: string; farmerName: string; farmerId: string };
+    weight: DeviceReading<number>;
+    moisture: DeviceReading<number>;
+    riskScore: number;
+    requiresSupervisorApproval: boolean;
+  }) => {
+    setHardwareWeight(data.weight);
+    setHardwareMoisture(data.moisture);
+    setMoisturePercent(data.moisture.value);
+    setAuditRiskScore(data.riskScore);
+    setRequiresSupervisorApproval(data.requiresSupervisorApproval);
+    setWorkflowStep('grading');
+    toast.success("Hardware capture complete", {
+      description: "Proceed to image capture and grading"
+    });
+  };
+
+  // Show hardware workflow step
+  if (workflowStep === 'hardware') {
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto space-y-6 pb-32">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Tobacco Grading</h1>
+              <p className="text-muted-foreground">Hardware-first workflow with manual fallback</p>
+            </div>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+              <Bluetooth className="h-3 w-3 mr-1" />
+              Step 1: Hardware Capture
+            </Badge>
+          </div>
+          <HardwareGradingWorkflow onComplete={handleHardwareComplete} />
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (showCamera) {
     return (
