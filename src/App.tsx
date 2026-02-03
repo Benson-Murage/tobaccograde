@@ -17,6 +17,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AuditPage from "./pages/AuditPage";
 import AuthPage from "./pages/AuthPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+import SupervisorPage from "./pages/SupervisorPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/audit" element={<AuditPage />} />
+            <Route path="/supervisor" element={<SupervisorPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

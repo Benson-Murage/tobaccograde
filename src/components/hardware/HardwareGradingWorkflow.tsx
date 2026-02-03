@@ -54,6 +54,7 @@ interface BaleInfo {
   code: string;
   farmerName: string;
   farmerId: string;
+  warehouseId?: string;
 }
 
 interface WorkflowStep {
@@ -230,6 +231,7 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
       code: 'BL-2024-00848',
       farmerName: 'Peter Nyambi',
       farmerId: 'FRM-001234',
+      warehouseId: 'warehouse-001',
     });
   };
 

@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Leaf,
   Menu,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: "Supervisor", href: "/supervisor", icon: Eye },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Audit Logs", href: "/audit", icon: Shield },
 ];
