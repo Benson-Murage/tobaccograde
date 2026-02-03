@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
 import { AIAnalysisPanel, type AISuggestion, type AIDecision, type Decision } from "@/components/grading/AIAnalysisPanel";
 import { PriceBreakdownCard } from "@/components/grading/PriceBreakdownCard";
 import { ImageCaptureGuidance, type CaptureMetadata } from "@/components/grading/ImageCaptureGuidance";
 import { HardwareGradingWorkflow } from "@/components/hardware/HardwareGradingWorkflow";
 import { AuditRiskBadge } from "@/components/hardware/AuditRiskBadge";
 import { type DeviceReading } from "@/lib/hardware-devices";
+import { submitGrading, type GradingSubmission } from "@/lib/grading-submission";
 import {
   LEAF_POSITIONS,
   TOBACCO_COLORS,
@@ -50,6 +53,7 @@ import {
   X,
   Bluetooth,
   Pencil,
+  Loader2,
 } from "lucide-react";
 
 // Workflow step type
@@ -67,11 +71,24 @@ const currentBale = {
 };
 
 export default function GradingPage() {
+  const navigate = useNavigate();
+  const { companyId } = useAuth();
+  
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('hardware');
   const [searchQuery, setSearchQuery] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Current bale data from hardware workflow
+  const [currentBaleData, setCurrentBaleData] = useState<{
+    id: string;
+    code: string;
+    farmerName: string;
+    farmerId: string;
+    warehouseId: string;
+  } | null>(null);
   
   // Hardware workflow data
   const [hardwareWeight, setHardwareWeight] = useState<DeviceReading<number> | null>(null);
@@ -265,12 +282,19 @@ export default function GradingPage() {
 
   // Handle hardware workflow completion
   const handleHardwareComplete = (data: {
-    bale: { id: string; code: string; farmerName: string; farmerId: string };
+    bale: { id: string; code: string; farmerName: string; farmerId: string; warehouseId?: string };
     weight: DeviceReading<number>;
     moisture: DeviceReading<number>;
     riskScore: number;
     requiresSupervisorApproval: boolean;
   }) => {
+    setCurrentBaleData({
+      id: data.bale.id,
+      code: data.bale.code,
+      farmerName: data.bale.farmerName,
+      farmerId: data.bale.farmerId,
+      warehouseId: data.bale.warehouseId || 'default-warehouse',
+    });
     setHardwareWeight(data.weight);
     setHardwareMoisture(data.moisture);
     setMoisturePercent(data.moisture.value);
@@ -280,6 +304,94 @@ export default function GradingPage() {
     toast.success("Hardware capture complete", {
       description: "Proceed to image capture and grading"
     });
+  };
+
+  // Handle grading submission
+  const handleConfirmGrade = async () => {
+    if (!gradeResult || !position || !color || !texture || !maturity || 
+        moisturePercent === null || defectPercent === null ||
+        !hardwareWeight || !hardwareMoisture || !currentBaleData) {
+      toast.error("Missing required data");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const submission: GradingSubmission = {
+        baleId: currentBaleData.id,
+        baleCode: currentBaleData.code,
+        farmerId: currentBaleData.farmerId,
+        warehouseId: currentBaleData.warehouseId,
+        companyId: companyId || 'demo-company',
+        weight: hardwareWeight,
+        moisture: hardwareMoisture,
+        leafPosition: position,
+        color,
+        texture,
+        maturity,
+        qualityBand: gradeResult.eligibility?.suggestedQualityBand || 2,
+        defectPercent,
+        aiSuggestedGrade: aiSuggestions.length > 0 ? gradeResult.grade : undefined,
+        aiDecisions: Object.keys(aiDecisions).length > 0 ? 
+          Object.fromEntries(
+            Object.entries(aiDecisions).map(([key, val]) => [
+              key, 
+              { decision: val.decision as 'accept' | 'modify' | 'reject', aiValue: val.aiValue, finalValue: val.finalValue }
+            ])
+          ) : undefined,
+        gradeCode: gradeResult.grade,
+        gradeClass: gradeResult.class,
+        unitPrice: priceBreakdown?.finalPricePerKg || 0,
+        totalValue: priceBreakdown?.totalValue || 0,
+        currency: 'USD',
+        riskScore: auditRiskScore,
+        requiresSupervisorApproval,
+      };
+
+      const result = await submitGrading(submission);
+
+      if (result.success) {
+        if (result.isOffline) {
+          toast.info("Grading saved offline", {
+            description: "Will sync when connection is restored"
+          });
+        } else if (result.requiresApproval) {
+          toast.warning("Grading requires approval", {
+            description: "Supervisor will review this grading"
+          });
+        } else {
+          toast.success("Grading submitted successfully", {
+            description: `Grade ${gradeResult.grade} recorded for ${currentBaleData.code}`
+          });
+        }
+        
+        // Reset for next bale
+        setWorkflowStep('hardware');
+        setCurrentBaleData(null);
+        setHardwareWeight(null);
+        setHardwareMoisture(null);
+        setCapturedImage(null);
+        setAiSuggestions([]);
+        setAiDecisions({});
+        setPosition(null);
+        setColor(null);
+        setTexture(null);
+        setMaturity(null);
+        setMoisturePercent(null);
+        setDefectPercent(null);
+        setAuditRiskScore(0);
+        setRequiresSupervisorApproval(false);
+      } else {
+        toast.error("Submission failed", {
+          description: result.error || "Please try again"
+        });
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast.error("Failed to submit grading");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Show hardware workflow step
@@ -556,10 +668,20 @@ export default function GradingPage() {
                 <span className="px-6 py-2 rounded-lg text-xl font-bold bg-muted text-muted-foreground">---</span>
               )}
             </div>
-            <Button variant="enterprise" size="lg" disabled={!gradeResult} className="w-full sm:w-auto">
-              <CheckCircle className="h-5 w-5 mr-2" />
-              Confirm Grade
-              <ChevronRight className="h-5 w-5 ml-1" />
+            <Button 
+              variant="enterprise" 
+              size="lg" 
+              disabled={!gradeResult || isSubmitting} 
+              onClick={handleConfirmGrade}
+              className="w-full sm:w-auto"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="h-5 w-5 mr-2" />
+              )}
+              {isSubmitting ? 'Submitting...' : 'Confirm Grade'}
+              {!isSubmitting && <ChevronRight className="h-5 w-5 ml-1" />}
             </Button>
           </div>
         </div>
