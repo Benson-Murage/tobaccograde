@@ -84,12 +84,17 @@ export function DeviceStatusPanel({
 }: DeviceStatusPanelProps) {
   const [isConnectingScale, setIsConnectingScale] = useState(false);
   const [isConnectingMoisture, setIsConnectingMoisture] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const bluetoothSupported = isBluetoothSupported();
 
   const handleConnectScale = async () => {
     setIsConnectingScale(true);
+    setConnectionError(null);
     try {
       await onConnectScale();
+    } catch (error) {
+      console.error('Scale connection error:', error);
+      setConnectionError('Failed to connect scale. Please try again or use manual entry.');
     } finally {
       setIsConnectingScale(false);
     }
@@ -97,8 +102,12 @@ export function DeviceStatusPanel({
 
   const handleConnectMoisture = async () => {
     setIsConnectingMoisture(true);
+    setConnectionError(null);
     try {
       await onConnectMoistureMeter();
+    } catch (error) {
+      console.error('Moisture meter connection error:', error);
+      setConnectionError('Failed to connect moisture meter. Please try again or use manual entry.');
     } finally {
       setIsConnectingMoisture(false);
     }
@@ -131,8 +140,11 @@ export function DeviceStatusPanel({
               <Bluetooth className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-foreground">Hardware Devices</h3>
             </div>
-            {!bluetoothSupported && (
-              <Badge variant="destructive">Bluetooth Not Supported</Badge>
+            {!bluetoothSupported ? (
+              <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Demo Mode</Badge>
+            ) : null}
+            {connectionError && (
+              <Badge variant="destructive" className="text-xs">{connectionError}</Badge>
             )}
           </div>
 
