@@ -3,6 +3,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useFarmers } from "@/hooks/useFarmers";
+import { FarmerRegistrationDialog } from "@/components/farmers/FarmerRegistrationDialog";
 import {
   Search,
   UserPlus,
@@ -13,77 +15,9 @@ import {
   Phone,
   FileText,
   ChevronRight,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
-
-interface Farmer {
-  id: string;
-  name: string;
-  nationalId: string;
-  contractNumber: string;
-  phone: string;
-  location: string;
-  totalBales: number;
-  seasonDeliveries: number;
-  status: "active" | "inactive" | "pending";
-}
-
-const farmers: Farmer[] = [
-  {
-    id: "FRM-001234",
-    name: "Peter Nyambi",
-    nationalId: "12-345678-X-12",
-    contractNumber: "CON-2024-0001",
-    phone: "+263 77 123 4567",
-    location: "Mashonaland East, Zimbabwe",
-    totalBales: 245,
-    seasonDeliveries: 12,
-    status: "active",
-  },
-  {
-    id: "FRM-001235",
-    name: "Sarah Tembo",
-    nationalId: "12-345679-X-12",
-    contractNumber: "CON-2024-0002",
-    phone: "+263 77 234 5678",
-    location: "Manicaland, Zimbabwe",
-    totalBales: 189,
-    seasonDeliveries: 8,
-    status: "active",
-  },
-  {
-    id: "FRM-001236",
-    name: "John Phiri",
-    nationalId: "12-345680-X-12",
-    contractNumber: "CON-2024-0003",
-    phone: "+263 77 345 6789",
-    location: "Mashonaland Central, Zimbabwe",
-    totalBales: 312,
-    seasonDeliveries: 15,
-    status: "active",
-  },
-  {
-    id: "FRM-001237",
-    name: "Grace Mwanza",
-    nationalId: "12-345681-X-12",
-    contractNumber: "CON-2024-0004",
-    phone: "+263 77 456 7890",
-    location: "Mashonaland West, Zimbabwe",
-    totalBales: 98,
-    seasonDeliveries: 5,
-    status: "pending",
-  },
-  {
-    id: "FRM-001238",
-    name: "David Lungu",
-    nationalId: "12-345682-X-12",
-    contractNumber: "CON-2024-0005",
-    phone: "+263 77 567 8901",
-    location: "Midlands, Zimbabwe",
-    totalBales: 156,
-    seasonDeliveries: 0,
-    status: "inactive",
-  },
-];
 
 const statusStyles = {
   active: "bg-success/10 text-success",
@@ -93,13 +27,10 @@ const statusStyles = {
 
 export default function FarmersPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const { farmers, isLoading, stats, addFarmer, searchFarmers, refetch } = useFarmers();
 
-  const filteredFarmers = farmers.filter(
-    (farmer) =>
-      farmer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      farmer.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      farmer.contractNumber.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFarmers = searchQuery ? searchFarmers(searchQuery) : farmers;
 
   return (
     <AppLayout>
@@ -112,10 +43,15 @@ export default function FarmersPage() {
               Manage farmer registrations and contracts
             </p>
           </div>
-          <Button variant="enterprise">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Register Farmer
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={refetch} disabled={isLoading}>
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            </Button>
+            <Button variant="enterprise" onClick={() => setShowAddDialog(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Register Farmer
+            </Button>
+          </div>
         </div>
 
         {/* Search & Filters */}
@@ -140,108 +76,137 @@ export default function FarmersPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-foreground">1,247</p>
+            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
             <p className="text-sm text-muted-foreground">Total Farmers</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-success">1,089</p>
+            <p className="text-2xl font-bold text-success">{stats.active}</p>
             <p className="text-sm text-muted-foreground">Active</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-warning">45</p>
+            <p className="text-2xl font-bold text-warning">0</p>
             <p className="text-sm text-muted-foreground">Pending</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-muted-foreground">113</p>
+            <p className="text-2xl font-bold text-muted-foreground">{stats.inactive}</p>
             <p className="text-sm text-muted-foreground">Inactive</p>
           </div>
         </div>
 
         {/* Farmers List */}
-        <div className="space-y-3">
-          {filteredFarmers.map((farmer) => (
-            <div
-              key={farmer.id}
-              className="card-elevated p-4 hover:shadow-card-hover transition-shadow cursor-pointer group"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                {/* Avatar & Basic Info */}
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg shrink-0">
-                    {farmer.name.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground truncate">
-                        {farmer.name}
-                      </h3>
-                      <span
-                        className={cn(
-                          "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
-                          statusStyles[farmer.status]
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredFarmers.length === 0 ? (
+          <div className="card-elevated p-12 text-center">
+            <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold text-lg">No farmers found</h3>
+            <p className="text-muted-foreground mt-1">
+              {searchQuery ? "Try a different search term" : "Register your first farmer to get started"}
+            </p>
+            {!searchQuery && (
+              <Button variant="enterprise" className="mt-4" onClick={() => setShowAddDialog(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Register Farmer
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredFarmers.map((farmer) => (
+              <div
+                key={farmer.id}
+                className="card-elevated p-4 hover:shadow-card-hover transition-shadow cursor-pointer group"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Avatar & Basic Info */}
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg shrink-0">
+                      {farmer.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground truncate">
+                          {farmer.full_name}
+                        </h3>
+                        <span
+                          className={cn(
+                            "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
+                            statusStyles[farmer.is_active ? 'active' : 'inactive']
+                          )}
+                        >
+                          {farmer.is_active ? 'active' : 'inactive'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                        <span className="font-mono">{farmer.farmer_code}</span>
+                        {farmer.contract_number && (
+                          <>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:flex items-center gap-1">
+                              <FileText className="h-3.5 w-3.5" />
+                              {farmer.contract_number}
+                            </span>
+                          </>
                         )}
-                      >
-                        {farmer.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                      <span className="font-mono">{farmer.id}</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="hidden sm:flex items-center gap-1">
-                        <FileText className="h-3.5 w-3.5" />
-                        {farmer.contractNumber}
-                      </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Contact & Location */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-4 w-4" />
-                    {farmer.phone}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {farmer.location}
-                  </span>
-                </div>
+                  {/* Contact & Location */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    {farmer.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-4 w-4" />
+                        {farmer.phone}
+                      </span>
+                    )}
+                    {farmer.farm_location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {farmer.farm_location}
+                      </span>
+                    )}
+                  </div>
 
-                {/* Stats */}
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <p className="text-lg font-bold text-foreground">{farmer.totalBales}</p>
-                    <p className="text-xs text-muted-foreground">Total Bales</p>
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="shrink-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold text-primary">{farmer.seasonDeliveries}</p>
-                    <p className="text-xs text-muted-foreground">This Season</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="shrink-0">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredFarmers.length} of {farmers.length} farmers
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm">
-              Next
-            </Button>
+        {filteredFarmers.length > 0 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredFarmers.length} of {farmers.length} farmers
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled>
+                Previous
+              </Button>
+              <Button variant="outline" size="sm">
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Registration Dialog */}
+      <FarmerRegistrationDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSubmit={addFarmer}
+      />
     </AppLayout>
   );
 }

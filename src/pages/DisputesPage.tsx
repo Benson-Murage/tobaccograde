@@ -3,6 +3,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useDisputes } from "@/hooks/useDisputes";
+import { DisputeActionDialog } from "@/components/disputes/DisputeActionDialog";
+import type { Dispute } from "@/hooks/useDisputes";
 import {
   Search,
   AlertTriangle,
@@ -14,85 +17,21 @@ import {
   CheckCircle,
   XCircle,
   ChevronRight,
+  RefreshCw,
+  Loader2,
+  Eye,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
-interface Dispute {
-  id: string;
-  baleCode: string;
-  farmer: string;
-  farmerId: string;
-  originalGrade: string;
-  requestedGrade: string;
-  reason: string;
-  status: "pending" | "under_review" | "resolved" | "rejected";
-  priority: "low" | "medium" | "high";
-  createdAt: string;
-  assignedTo: string | null;
-}
-
-const disputes: Dispute[] = [
-  {
-    id: "DSP-001",
-    baleCode: "BL-2024-00845",
-    farmer: "John Phiri",
-    farmerId: "FRM-001236",
-    originalGrade: "C2F",
-    requestedGrade: "L3F",
-    reason: "Farmer disputes color assessment. Claims tobacco was lemon, not reddish.",
-    status: "pending",
-    priority: "high",
-    createdAt: "2024-01-12 10:30",
-    assignedTo: null,
-  },
-  {
-    id: "DSP-002",
-    baleCode: "BL-2024-00839",
-    farmer: "Mary Banda",
-    farmerId: "FRM-001240",
-    originalGrade: "X1F",
-    requestedGrade: "C3F",
-    reason: "Moisture reading disputed. Farmer has independent test showing 15%.",
-    status: "under_review",
-    priority: "medium",
-    createdAt: "2024-01-11 14:22",
-    assignedTo: "Quality Supervisor",
-  },
-  {
-    id: "DSP-003",
-    baleCode: "BL-2024-00832",
-    farmer: "Peter Nyambi",
-    farmerId: "FRM-001234",
-    originalGrade: "L4F",
-    requestedGrade: "L2F",
-    reason: "Claims defect assessment was incorrect. Requesting re-inspection.",
-    status: "resolved",
-    priority: "low",
-    createdAt: "2024-01-10 09:15",
-    assignedTo: "Quality Supervisor",
-  },
-  {
-    id: "DSP-004",
-    baleCode: "BL-2024-00828",
-    farmer: "Grace Mwanza",
-    farmerId: "FRM-001237",
-    originalGrade: "REJ",
-    requestedGrade: "X2F",
-    reason: "Rejection disputed. Farmer claims mold was external contamination, not intrinsic.",
-    status: "rejected",
-    priority: "high",
-    createdAt: "2024-01-09 16:45",
-    assignedTo: "Quality Supervisor",
-  },
-];
-
-const statusStyles = {
-  pending: "bg-warning/10 text-warning",
+const statusStyles: Record<string, string> = {
+  open: "bg-warning/10 text-warning",
   under_review: "bg-primary/10 text-primary",
   resolved: "bg-success/10 text-success",
-  rejected: "bg-destructive/10 text-destructive",
+  escalated: "bg-destructive/10 text-destructive",
+  closed: "bg-muted text-muted-foreground",
 };
 
-const priorityStyles = {
+const priorityStyles: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
   medium: "bg-secondary/50 text-secondary-foreground",
   high: "bg-destructive/10 text-destructive",
@@ -101,18 +40,43 @@ const priorityStyles = {
 export default function DisputesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+  const [actionType, setActionType] = useState<'review' | 'resolve' | 'reject'>('review');
+  const [showActionDialog, setShowActionDialog] = useState(false);
+
+  const { 
+    disputes, 
+    isLoading, 
+    isProcessing,
+    stats, 
+    reviewDispute, 
+    resolveDispute, 
+    rejectDispute,
+    refetch 
+  } = useDisputes();
 
   const filteredDisputes = disputes.filter((dispute) => {
     const matchesSearch =
-      dispute.baleCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dispute.farmer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dispute.bale_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dispute.farmer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       dispute.id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || dispute.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const pendingCount = disputes.filter((d) => d.status === "pending").length;
-  const reviewCount = disputes.filter((d) => d.status === "under_review").length;
+  const handleAction = (dispute: Dispute, action: 'review' | 'resolve' | 'reject') => {
+    setSelectedDispute(dispute);
+    setActionType(action);
+    setShowActionDialog(true);
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <AppLayout>
@@ -125,12 +89,17 @@ export default function DisputesPage() {
               Review and resolve grading disputes
             </p>
           </div>
-          {pendingCount > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 text-warning">
-              <AlertTriangle className="h-5 w-5" />
-              <span className="font-semibold">{pendingCount} pending disputes require attention</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={refetch} disabled={isLoading}>
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            </Button>
+            {stats.open > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 text-warning">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-semibold">{stats.open} pending disputes require attention</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Search & Filters */}
@@ -152,10 +121,11 @@ export default function DisputesPage() {
                 className="h-11 px-4 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="all">All Status</option>
-                <option value="pending">Pending</option>
+                <option value="open">Open</option>
                 <option value="under_review">Under Review</option>
                 <option value="resolved">Resolved</option>
-                <option value="rejected">Rejected</option>
+                <option value="escalated">Escalated</option>
+                <option value="closed">Closed</option>
               </select>
               <Button variant="outline">
                 <Filter className="h-4 w-4 mr-2" />
@@ -166,122 +136,186 @@ export default function DisputesPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-warning">{pendingCount}</p>
-            <p className="text-sm text-muted-foreground">Pending</p>
+            <p className="text-2xl font-bold text-warning">{stats.open}</p>
+            <p className="text-sm text-muted-foreground">Open</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-primary">{reviewCount}</p>
+            <p className="text-2xl font-bold text-primary">{stats.underReview}</p>
             <p className="text-sm text-muted-foreground">Under Review</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-success">
-              {disputes.filter((d) => d.status === "resolved").length}
-            </p>
+            <p className="text-2xl font-bold text-destructive">{stats.escalated}</p>
+            <p className="text-sm text-muted-foreground">Escalated</p>
+          </div>
+          <div className="card-elevated p-4 text-center">
+            <p className="text-2xl font-bold text-success">{stats.resolved}</p>
             <p className="text-sm text-muted-foreground">Resolved</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <p className="text-2xl font-bold text-destructive">
-              {disputes.filter((d) => d.status === "rejected").length}
-            </p>
-            <p className="text-sm text-muted-foreground">Rejected</p>
+            <p className="text-2xl font-bold text-muted-foreground">{stats.closed}</p>
+            <p className="text-sm text-muted-foreground">Closed</p>
           </div>
         </div>
 
         {/* Disputes List */}
-        <div className="space-y-3">
-          {filteredDisputes.map((dispute) => (
-            <div
-              key={dispute.id}
-              className="card-elevated p-4 hover:shadow-card-hover transition-shadow cursor-pointer group"
-            >
-              <div className="flex flex-col gap-4">
-                {/* Header Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10 text-warning">
-                      <AlertTriangle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-foreground">
-                          {dispute.id}
-                        </span>
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
-                            statusStyles[dispute.status]
-                          )}
-                        >
-                          {dispute.status.replace("_", " ")}
-                        </span>
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
-                            priorityStyles[dispute.priority]
-                          )}
-                        >
-                          {dispute.priority} priority
-                        </span>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredDisputes.length === 0 ? (
+          <div className="card-elevated p-12 text-center">
+            <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
+            <h3 className="font-semibold text-lg">No disputes found</h3>
+            <p className="text-muted-foreground mt-1">
+              {searchQuery || statusFilter !== 'all' 
+                ? "Try adjusting your filters" 
+                : "All disputes have been resolved!"}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredDisputes.map((dispute) => (
+              <div
+                key={dispute.id}
+                className="card-elevated p-4 hover:shadow-card-hover transition-shadow group"
+              >
+                <div className="flex flex-col gap-4">
+                  {/* Header Row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                        <AlertTriangle className="h-5 w-5" />
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                        <span className="flex items-center gap-1">
-                          <Package className="h-3.5 w-3.5" />
-                          {dispute.baleCode}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <User className="h-3.5 w-3.5" />
-                          {dispute.farmer}
-                        </span>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-sm font-bold text-foreground">
+                            {dispute.id}
+                          </span>
+                          <span
+                            className={cn(
+                              "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
+                              statusStyles[dispute.status] || statusStyles.open
+                            )}
+                          >
+                            {dispute.status.replace("_", " ")}
+                          </span>
+                          {dispute.priority && (
+                            <span
+                              className={cn(
+                                "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
+                                priorityStyles[dispute.priority] || priorityStyles.medium
+                              )}
+                            >
+                              {dispute.priority} priority
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                          {dispute.bale_code && (
+                            <span className="flex items-center gap-1">
+                              <Package className="h-3.5 w-3.5" />
+                              {dispute.bale_code}
+                            </span>
+                          )}
+                          {dispute.farmer_name && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <User className="h-3.5 w-3.5" />
+                                {dispute.farmer_name}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      {formatDate(dispute.raised_at)}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    {dispute.createdAt}
+                  {/* Grade Change */}
+                  <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Original Grade</p>
+                      <span className="grade-badge grade-standard">{dispute.original_grade || '—'}</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Requested Grade</p>
+                      <span className="grade-badge grade-good">{dispute.new_grade_code || '—'}</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Grade Change */}
-                <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Original Grade</p>
-                    <span className="grade-badge grade-standard">{dispute.originalGrade}</span>
+                  {/* Reason */}
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <p className="text-sm text-muted-foreground">{dispute.reason}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Requested Grade</p>
-                    <span className="grade-badge grade-good">{dispute.requestedGrade}</span>
-                  </div>
-                </div>
 
-                {/* Reason */}
-                <div className="flex items-start gap-2">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="text-sm text-muted-foreground">{dispute.reason}</p>
-                </div>
+                  {/* Resolution notes if resolved */}
+                  {dispute.resolution_notes && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-success/5 border border-success/20">
+                      <CheckCircle className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <p className="text-sm text-foreground">{dispute.resolution_notes}</p>
+                    </div>
+                  )}
 
-                {/* Actions */}
-                {dispute.status === "pending" && (
-                  <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                    <Button variant="outline" size="sm">
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Reject
-                    </Button>
-                    <Button variant="enterprise" size="sm">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Review
-                    </Button>
-                  </div>
-                )}
+                  {/* Actions */}
+                  {(dispute.status === 'open' || dispute.status === 'under_review' || dispute.status === 'escalated') && (
+                    <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                      {dispute.status === 'open' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleAction(dispute, 'review')}
+                          disabled={isProcessing}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Review
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleAction(dispute, 'reject')}
+                        disabled={isProcessing}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                      <Button 
+                        variant="enterprise" 
+                        size="sm"
+                        onClick={() => handleAction(dispute, 'resolve')}
+                        disabled={isProcessing}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Resolve
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Action Dialog */}
+      <DisputeActionDialog
+        open={showActionDialog}
+        onOpenChange={setShowActionDialog}
+        dispute={selectedDispute}
+        action={actionType}
+        onReview={reviewDispute}
+        onResolve={resolveDispute}
+        onReject={rejectDispute}
+      />
     </AppLayout>
   );
 }
