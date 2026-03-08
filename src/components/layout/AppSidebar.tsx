@@ -45,6 +45,8 @@ const navigation = [
   { name: "Disputes", href: "/disputes", icon: AlertTriangle },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Analytics", href: "/analytics", icon: Gauge },
+  { name: "Disease Detection", href: "/disease-detection", icon: Bug },
+  { name: "Harvest Prediction", href: "/harvest-prediction", icon: Sprout },
 ];
 
 const adminNavigation = [
