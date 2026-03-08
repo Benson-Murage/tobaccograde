@@ -57,6 +57,8 @@ const adminNavigation = [
   { name: "Image Review", href: "/image-review", icon: Camera },
   { name: "Grader Perf.", href: "/grader-performance", icon: BarChart3 },
   { name: "Calibration", href: "/device-calibration", icon: Wrench },
+  { name: "Blockchain Ledger", href: "/blockchain-ledger", icon: Link2 },
+  { name: "Farm Verification", href: "/farm-verification", icon: Satellite },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Audit Logs", href: "/audit", icon: Shield },
 ];

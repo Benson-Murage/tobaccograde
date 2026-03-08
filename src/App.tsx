@@ -160,6 +160,28 @@ const App = () => (
               </ProtectedRoute>
             } />
 
+            {/* AI & Advanced modules */}
+            <Route path="/disease-detection" element={
+              <ProtectedRoute requiredRoles={['grader', 'quality_supervisor', 'company_admin', 'super_admin']}>
+                <DiseaseDetectionPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/blockchain-ledger" element={
+              <ProtectedRoute requiredRoles={['auditor', 'quality_supervisor', 'company_admin', 'super_admin']}>
+                <BlockchainLedgerPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/farm-verification" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <FarmVerificationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/harvest-prediction" element={
+              <ProtectedRoute requiredRoles={['grader', 'quality_supervisor', 'company_admin', 'super_admin']}>
+                <HarvestPredictionPage />
+              </ProtectedRoute>
+            } />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
