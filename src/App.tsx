@@ -29,6 +29,10 @@ import WarehouseManagementPage from "./pages/WarehouseManagementPage";
 import SeasonManagementPage from "./pages/SeasonManagementPage";
 import ExportCertificationPage from "./pages/ExportCertificationPage";
 import TraceabilityPage from "./pages/TraceabilityPage";
+import DiseaseDetectionPage from "./pages/DiseaseDetectionPage";
+import BlockchainLedgerPage from "./pages/BlockchainLedgerPage";
+import FarmVerificationPage from "./pages/FarmVerificationPage";
+import HarvestPredictionPage from "./pages/HarvestPredictionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
