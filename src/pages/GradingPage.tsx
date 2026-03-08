@@ -454,30 +454,32 @@ export default function GradingPage() {
         </div>
 
         {/* Current Bale Info */}
-        <div className="card-elevated p-6 gradient-hero text-primary-foreground">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                <span className="font-mono text-lg font-bold">{currentBale.code}</span>
+        {currentBaleData && hardwareWeight && (
+          <div className="card-elevated p-6 gradient-hero text-primary-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  <span className="font-mono text-lg font-bold">{currentBaleData.code}</span>
+                </div>
+                <div className="flex items-center gap-4 text-primary-foreground/80 text-sm">
+                  <span className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    {currentBaleData.farmerName}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Scale className="h-4 w-4" />
+                    {hardwareWeight.value} kg
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-primary-foreground/80 text-sm">
-                <span className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  {currentBale.farmer}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Scale className="h-4 w-4" />
-                  {currentBale.weight} kg
-                </span>
+              <div className="text-right text-sm text-primary-foreground/70">
+                <p>Moisture: {hardwareMoisture?.value}%</p>
+                <AuditRiskBadge score={auditRiskScore} />
               </div>
-            </div>
-            <div className="text-right text-sm text-primary-foreground/70">
-              <p>{currentBale.warehouse}</p>
-              <p>{currentBale.deliveryDate}</p>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Captured Image Preview */}
         {capturedImage && (
