@@ -1,26 +1,15 @@
+import { useState, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { logAudit } from "@/lib/audit-logger";
+import { toast } from "sonner";
 import {
-  BarChart3,
-  Download,
-  FileText,
-  Calendar,
-  TrendingUp,
-  Users,
-  Package,
-  DollarSign,
+  BarChart3, Download, FileText, Calendar, TrendingUp, Users, Package, DollarSign, Loader2,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
 } from "recharts";
 
 const dailyGradingData = [
@@ -41,142 +30,141 @@ const graderPerformance = [
 ];
 
 const reports = [
-  {
-    name: "Daily Grading Summary",
-    description: "Complete breakdown of today's grading activities",
-    icon: BarChart3,
-    lastGenerated: "5 min ago",
-  },
-  {
-    name: "Farmer Payment Report",
-    description: "Payment calculations for all graded bales",
-    icon: DollarSign,
-    lastGenerated: "1 hour ago",
-  },
-  {
-    name: "Grade Distribution Analysis",
-    description: "Statistical analysis of grade distributions",
-    icon: TrendingUp,
-    lastGenerated: "2 hours ago",
-  },
-  {
-    name: "Grader Performance Report",
-    description: "Individual grader metrics and accuracy",
-    icon: Users,
-    lastGenerated: "Today 6:00 AM",
-  },
-  {
-    name: "Seasonal Summary",
-    description: "Season-to-date cumulative report",
-    icon: Calendar,
-    lastGenerated: "Yesterday",
-  },
-  {
-    name: "Dispute Resolution Log",
-    description: "Complete audit trail of all disputes",
-    icon: FileText,
-    lastGenerated: "Real-time",
-  },
+  { name: "Daily Grading Summary", description: "Complete breakdown of today's grading activities", icon: BarChart3, type: "grading_summary" },
+  { name: "Farmer Payment Report", description: "Payment calculations for all graded bales", icon: DollarSign, type: "farmer_payment" },
+  { name: "Grade Distribution Analysis", description: "Statistical analysis of grade distributions", icon: TrendingUp, type: "grade_distribution" },
+  { name: "Grader Performance Report", description: "Individual grader metrics and accuracy", icon: Users, type: "grader_performance" },
+  { name: "Seasonal Summary", description: "Season-to-date cumulative report", icon: Calendar, type: "seasonal_summary" },
+  { name: "Dispute Resolution Log", description: "Complete audit trail of all disputes", icon: FileText, type: "dispute_log" },
 ];
 
 export default function ReportsPage() {
+  const { companyId } = useAuth();
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const exportReport = useCallback(async (type: string, format: 'csv' | 'pdf') => {
+    setExporting(`${type}-${format}`);
+    try {
+      let csvContent = '';
+      let filename = `${type}-${new Date().toISOString().split('T')[0]}`;
+
+      if (type === 'grading_summary' || type === 'grade_distribution') {
+        const query = supabase
+          .from('gradings')
+          .select('id, grade_code, grade_class, graded_at, moisture_percent, defect_percent, bales(bale_code, weight_kg, farmers(full_name))')
+          .order('graded_at', { ascending: false })
+          .limit(500);
+        if (companyId) query.eq('company_id', companyId);
+        const { data } = await query;
+        
+        csvContent = 'Bale Code,Farmer,Grade,Grade Class,Moisture %,Defect %,Weight (kg),Graded At\n';
+        (data || []).forEach((g: any) => {
+          csvContent += `${g.bales?.bale_code || ''},${g.bales?.farmers?.full_name || ''},${g.grade_code},${g.grade_class || ''},${g.moisture_percent || ''},${g.defect_percent || ''},${g.bales?.weight_kg || ''},${g.graded_at}\n`;
+        });
+      } else if (type === 'farmer_payment') {
+        const query = supabase
+          .from('bales')
+          .select('bale_code, weight_kg, status, farmers(full_name, farmer_code)')
+          .order('registered_at', { ascending: false })
+          .limit(500);
+        if (companyId) query.eq('company_id', companyId);
+        const { data } = await query;
+        
+        csvContent = 'Farmer,Farmer Code,Bale Code,Weight (kg),Status\n';
+        (data || []).forEach((b: any) => {
+          csvContent += `${b.farmers?.full_name || ''},${b.farmers?.farmer_code || ''},${b.bale_code},${b.weight_kg},${b.status}\n`;
+        });
+      } else if (type === 'dispute_log') {
+        const query = supabase
+          .from('disputes')
+          .select('id, reason, status, priority, raised_at, resolution_notes, new_grade_code')
+          .order('raised_at', { ascending: false })
+          .limit(500);
+        if (companyId) query.eq('company_id', companyId);
+        const { data } = await query;
+        
+        csvContent = 'ID,Status,Priority,Reason,Resolution,New Grade,Raised At\n';
+        (data || []).forEach((d: any) => {
+          csvContent += `${d.id},${d.status},${d.priority || ''},${(d.reason || '').replace(/,/g, ';')},${(d.resolution_notes || '').replace(/,/g, ';')},${d.new_grade_code || ''},${d.raised_at}\n`;
+        });
+      } else {
+        toast.info("Report generation in progress", { description: "This report type will be available soon." });
+        setExporting(null);
+        return;
+      }
+
+      if (format === 'csv') {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      await logAudit({
+        action: 'EXPORT',
+        entity_type: 'report',
+        new_values: { report_type: type, format },
+      });
+
+      toast.success("Report exported", { description: `${filename}.${format}` });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error("Export failed");
+    } finally {
+      setExporting(null);
+    }
+  }, [companyId]);
+
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
-            <p className="text-muted-foreground">
-              Generate and export detailed operational reports
-            </p>
+            <p className="text-muted-foreground">Generate and export detailed operational reports</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Date Range
-            </Button>
-            <Button variant="enterprise">
-              <Download className="h-4 w-4 mr-2" />
-              Export All
+            <Button variant="outline"><Calendar className="h-4 w-4 mr-2" />Date Range</Button>
+            <Button variant="enterprise" onClick={() => exportReport('grading_summary', 'csv')}>
+              <Download className="h-4 w-4 mr-2" />Export All
             </Button>
           </div>
         </div>
 
-        {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Daily Grading Trend */}
           <div className="card-elevated p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">Daily Grading Volume</h3>
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dailyGradingData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar 
-                    dataKey="bales" 
-                    fill="hsl(var(--primary))" 
-                    radius={[4, 4, 0, 0]}
-                  />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                  <Bar dataKey="bales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
-
-          {/* Value Trend */}
           <div className="card-elevated p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">Daily Value (USD)</h3>
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyGradingData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Value"]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="hsl(var(--success))"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(var(--success))" }}
-                  />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`$${v.toLocaleString()}`, "Value"]} />
+                  <Line type="monotone" dataKey="value" stroke="hsl(var(--success))" strokeWidth={2} dot={{ fill: "hsl(var(--success))" }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* Grader Performance */}
         <div className="card-elevated overflow-hidden">
           <div className="p-6 border-b border-border">
             <h3 className="text-lg font-semibold text-foreground">Grader Performance</h3>
@@ -186,25 +174,15 @@ export default function ReportsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
-                    Grader
-                  </th>
-                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
-                    Bales Graded
-                  </th>
-                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
-                    Accuracy
-                  </th>
-                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
-                    Avg. Time (sec)
-                  </th>
-                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
-                    Performance
-                  </th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Grader</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Bales Graded</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Accuracy</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Avg. Time (sec)</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Performance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {graderPerformance.map((grader, index) => (
+                {graderPerformance.map((grader) => (
                   <tr key={grader.name} className="hover:bg-muted/20 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -214,25 +192,18 @@ export default function ReportsPage() {
                         <span className="font-medium text-foreground">{grader.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-lg font-bold text-foreground">{grader.bales}</span>
-                    </td>
+                    <td className="px-6 py-4"><span className="text-lg font-bold text-foreground">{grader.bales}</span></td>
                     <td className="px-6 py-4">
                       <span className={`font-semibold ${grader.accuracy >= 98 ? 'text-success' : grader.accuracy >= 96 ? 'text-primary' : 'text-warning'}`}>
                         {grader.accuracy}%
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`font-medium ${grader.avgTime <= 2 ? 'text-success' : 'text-warning'}`}>
-                        {grader.avgTime}s
-                      </span>
+                      <span className={`font-medium ${grader.avgTime <= 2 ? 'text-success' : 'text-warning'}`}>{grader.avgTime}s</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="w-24 bg-muted rounded-full h-2">
-                        <div 
-                          className="bg-primary rounded-full h-2 transition-all"
-                          style={{ width: `${(grader.bales / 245) * 100}%` }}
-                        />
+                        <div className="bg-primary rounded-full h-2 transition-all" style={{ width: `${(grader.bales / 245) * 100}%` }} />
                       </div>
                     </td>
                   </tr>
@@ -242,17 +213,14 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Available Reports */}
         <div className="card-elevated p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Available Reports</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {reports.map((report) => {
               const Icon = report.icon;
+              const isExportingCsv = exporting === `${report.type}-csv`;
               return (
-                <div
-                  key={report.name}
-                  className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-all cursor-pointer group"
-                >
+                <div key={report.name} className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-all group">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                       <Icon className="h-5 w-5" />
@@ -260,19 +228,16 @@ export default function ReportsPage() {
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground text-sm">{report.name}</h4>
                       <p className="text-xs text-muted-foreground mt-1">{report.description}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Last: {report.lastGenerated}
-                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <FileText className="h-3.5 w-3.5 mr-1" />
-                      PDF
+                    <Button variant="outline" size="sm" className="flex-1" disabled>
+                      <FileText className="h-3.5 w-3.5 mr-1" />PDF
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Download className="h-3.5 w-3.5 mr-1" />
-                      Excel
+                    <Button variant="outline" size="sm" className="flex-1"
+                      onClick={() => exportReport(report.type, 'csv')} disabled={!!exporting}>
+                      {isExportingCsv ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                      CSV
                     </Button>
                   </div>
                 </div>
