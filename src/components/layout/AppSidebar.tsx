@@ -24,6 +24,10 @@ import {
   Gauge,
   Camera,
   Wrench,
+  Bug,
+  Link2,
+  Satellite,
+  Sprout,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
