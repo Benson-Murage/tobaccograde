@@ -259,7 +259,7 @@ export default function GradingPage() {
       qualityBand: gradeResult.eligibility?.suggestedQualityBand || 2,
       moisturePercent,
       defectPercent,
-      weightKg: currentBale.weight,
+      weightKg: hardwareWeight?.value || 0,
     });
   }, [position, color, texture, gradeResult, moisturePercent, defectPercent]);
 
