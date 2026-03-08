@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -16,9 +16,11 @@ import {
   Leaf,
   Menu,
   Eye,
+  LogIn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -39,16 +41,36 @@ const adminNavigation = [
 interface AppSidebarProps {
   userRole?: string;
   userName?: string;
+  onSignOut?: () => Promise<void>;
 }
 
-export function AppSidebar({ userRole = "Company Admin", userName = "John Mukasa" }: AppSidebarProps) {
+export function AppSidebar({ userRole = "Guest", userName = "Guest User", onSignOut }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (href: string) => {
     if (href === "/") return location.pathname === "/";
     return location.pathname.startsWith(href);
+  };
+
+  const handleSignOut = async () => {
+    if (!onSignOut) {
+      navigate('/auth');
+      return;
+    }
+    setIsSigningOut(true);
+    try {
+      await onSignOut();
+      toast.success('Signed out successfully');
+      navigate('/auth');
+    } catch (error) {
+      toast.error('Failed to sign out');
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const SidebarContent = () => (
@@ -94,7 +116,7 @@ export function AppSidebar({ userRole = "Company Admin", userName = "John Mukasa
         })}
 
         {/* Admin section */}
-        {(userRole === "Super Admin" || userRole === "Company Admin") && (
+        {(userRole === "Super Admin" || userRole === "Company Admin" || userRole === "Quality Supervisor" || userRole === "User") && (
           <>
             <div className={cn(
               "pt-4 pb-2",
@@ -142,7 +164,7 @@ export function AppSidebar({ userRole = "Company Admin", userName = "John Mukasa
           collapsed && "justify-center px-2"
         )}>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold text-sidebar-foreground">
-            {userName.split(" ").map(n => n[0]).join("")}
+            {userName.split(" ").map(n => n[0]).join("").slice(0, 2)}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
@@ -157,9 +179,11 @@ export function AppSidebar({ userRole = "Company Admin", userName = "John Mukasa
             "w-full justify-start gap-3 mt-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
             collapsed && "justify-center px-2"
           )}
+          onClick={handleSignOut}
+          disabled={isSigningOut}
         >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span>Sign out</span>}
+          {onSignOut ? <LogOut className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+          {!collapsed && <span>{onSignOut ? (isSigningOut ? 'Signing out...' : 'Sign out') : 'Sign in'}</span>}
         </Button>
       </div>
 
