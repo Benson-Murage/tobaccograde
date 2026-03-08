@@ -27,6 +27,7 @@ import {
   LEAF_POSITIONS,
   TOBACCO_COLORS,
   TOBACCO_TEXTURES,
+  TOBACCO_MATURITY,
   generateGradeCode,
   validateMoisture,
   calculateTobaccoPrice,
