@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { 
   ClipboardCheck, 
   Package, 
-  UserPlus, 
+  Users,
   AlertTriangle,
   Scan,
   FileText
@@ -32,10 +32,10 @@ const actions = [
     primary: false,
   },
   {
-    name: "Add Farmer",
-    description: "Register farmer",
-    href: "/farmers/new",
-    icon: UserPlus,
+    name: "Farmers",
+    description: "Manage farmers",
+    href: "/farmers",
+    icon: Users,
     primary: false,
   },
   {
