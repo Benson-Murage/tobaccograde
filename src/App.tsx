@@ -19,6 +19,10 @@ import AuditPage from "./pages/AuditPage";
 import AuthPage from "./pages/AuthPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import SupervisorPage from "./pages/SupervisorPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ImageReviewPage from "./pages/ImageReviewPage";
+import GraderPerformancePage from "./pages/GraderPerformancePage";
+import DeviceCalibrationPage from "./pages/DeviceCalibrationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
