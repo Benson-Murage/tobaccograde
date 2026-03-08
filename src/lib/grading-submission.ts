@@ -220,6 +220,15 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
       }
     }
     
+    // Insert grading price
+    const { error: priceError } = await supabase
+      .from('grading_prices')
+      .insert([priceRecord]);
+    
+    if (priceError) {
+      console.error('Grading price insert error:', priceError);
+    }
+    
     // Log audit
     await auditGrade(gradingId, submission.baleId, submission.gradeCode, {
       weight: submission.weight.value,

@@ -59,16 +59,7 @@ import {
 // Workflow step type
 type WorkflowStep = 'hardware' | 'grading';
 
-// Mock bale data
-const currentBale = {
-  id: "bale-001",
-  code: "BL-2024-00848",
-  farmer: "Peter Nyambi",
-  farmerId: "FRM-001234",
-  weight: 42.5,
-  deliveryDate: "2024-01-12",
-  warehouse: "Warehouse A - Bay 3",
-};
+// No mock data - bale info comes from hardware workflow
 
 export default function GradingPage() {
   const navigate = useNavigate();
