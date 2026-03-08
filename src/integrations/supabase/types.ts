@@ -637,6 +637,136 @@ export type Database = {
           },
         ]
       }
+      export_batch_bales: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          bale_id: string
+          batch_id: string
+          id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          bale_id: string
+          batch_id: string
+          id?: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          bale_id?: string
+          batch_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_batch_bales_bale_id_fkey"
+            columns: ["bale_id"]
+            isOneToOne: false
+            referencedRelation: "bales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_batch_bales_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "export_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      export_batches: {
+        Row: {
+          batch_code: string
+          buyer_name: string | null
+          certificate_number: string | null
+          certified_at: string | null
+          certified_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          destination_country: string | null
+          id: string
+          inspected_at: string | null
+          inspected_by: string | null
+          inspection_notes: string | null
+          inspection_status: string | null
+          season_id: string | null
+          status: string
+          total_bales: number
+          total_weight_kg: number | null
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          batch_code: string
+          buyer_name?: string | null
+          certificate_number?: string | null
+          certified_at?: string | null
+          certified_by?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          destination_country?: string | null
+          id?: string
+          inspected_at?: string | null
+          inspected_by?: string | null
+          inspection_notes?: string | null
+          inspection_status?: string | null
+          season_id?: string | null
+          status?: string
+          total_bales?: number
+          total_weight_kg?: number | null
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          batch_code?: string
+          buyer_name?: string | null
+          certificate_number?: string | null
+          certified_at?: string | null
+          certified_by?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          destination_country?: string | null
+          id?: string
+          inspected_at?: string | null
+          inspected_by?: string | null
+          inspection_notes?: string | null
+          inspection_status?: string | null
+          season_id?: string | null
+          status?: string
+          total_bales?: number
+          total_weight_kg?: number | null
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_batches_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farmers: {
         Row: {
           bank_account: string | null

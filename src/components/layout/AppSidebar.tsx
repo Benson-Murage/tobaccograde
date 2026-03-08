@@ -17,6 +17,10 @@ import {
   Menu,
   Eye,
   LogIn,
+  Building2,
+  Calendar,
+  FileCheck,
+  Route,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +31,7 @@ const navigation = [
   { name: "Farmers", href: "/farmers", icon: Users },
   { name: "Bales & Batches", href: "/bales", icon: Package },
   { name: "Grading", href: "/grading", icon: ClipboardCheck },
+  { name: "Traceability", href: "/traceability", icon: Route },
   { name: "Pricing", href: "/pricing", icon: DollarSign },
   { name: "Disputes", href: "/disputes", icon: AlertTriangle },
   { name: "Reports", href: "/reports", icon: BarChart3 },
@@ -34,6 +39,9 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: "Warehouses", href: "/warehouses", icon: Building2 },
+  { name: "Seasons", href: "/seasons", icon: Calendar },
+  { name: "Export Certification", href: "/export-certification", icon: FileCheck },
   { name: "Supervisor", href: "/supervisor", icon: Eye },
   { name: "Image Review", href: "/image-review", icon: Eye },
   { name: "Grader Performance", href: "/grader-performance", icon: BarChart3 },
