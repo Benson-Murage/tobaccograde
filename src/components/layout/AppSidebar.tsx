@@ -30,6 +30,7 @@ const navigation = [
   { name: "Pricing", href: "/pricing", icon: DollarSign },
   { name: "Disputes", href: "/disputes", icon: AlertTriangle },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 
 const adminNavigation = [
