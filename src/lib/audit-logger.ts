@@ -27,6 +27,7 @@ export type AuditAction =
   | 'SYNC'
   | 'DEVICE_REGISTER'
   | 'DEVICE_TRUST'
+  | 'CALIBRATE'
   | 'PERMISSION_CHANGE';
 
 export type EntityType = 
