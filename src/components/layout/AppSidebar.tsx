@@ -21,9 +21,14 @@ import {
   Calendar,
   FileCheck,
   Route,
+  Gauge,
+  Camera,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { toast } from "sonner";
 
 const navigation = [
@@ -35,17 +40,17 @@ const navigation = [
   { name: "Pricing", href: "/pricing", icon: DollarSign },
   { name: "Disputes", href: "/disputes", icon: AlertTriangle },
   { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Analytics", href: "/analytics", icon: Gauge },
 ];
 
 const adminNavigation = [
   { name: "Warehouses", href: "/warehouses", icon: Building2 },
   { name: "Seasons", href: "/seasons", icon: Calendar },
-  { name: "Export Certification", href: "/export-certification", icon: FileCheck },
+  { name: "Export Cert.", href: "/export-certification", icon: FileCheck },
   { name: "Supervisor", href: "/supervisor", icon: Eye },
-  { name: "Image Review", href: "/image-review", icon: Eye },
-  { name: "Grader Performance", href: "/grader-performance", icon: BarChart3 },
-  { name: "Device Calibration", href: "/device-calibration", icon: Settings },
+  { name: "Image Review", href: "/image-review", icon: Camera },
+  { name: "Grader Perf.", href: "/grader-performance", icon: BarChart3 },
+  { name: "Calibration", href: "/device-calibration", icon: Wrench },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Audit Logs", href: "/audit", icon: Shield },
 ];
@@ -96,15 +101,16 @@ export function AppSidebar({ userRole = "Guest", userName = "Guest User", onSign
           <Leaf className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
         {!collapsed && (
-          <div className="flex flex-col">
+          <div className="flex flex-col flex-1">
             <span className="text-lg font-bold text-sidebar-foreground">LeafGrade</span>
             <span className="text-xs text-sidebar-foreground/60">Tobacco Grading System</span>
           </div>
         )}
+        {!collapsed && <NotificationBell />}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -166,11 +172,15 @@ export function AppSidebar({ userRole = "Guest", userName = "Guest User", onSign
         )}
       </nav>
 
-      {/* User section */}
+      {/* Footer section */}
       <div className={cn(
-        "border-t border-sidebar-border p-3",
+        "border-t border-sidebar-border p-3 space-y-1",
         collapsed && "px-2"
       )}>
+        {/* Theme toggle */}
+        <ThemeToggle collapsed={collapsed} />
+
+        {/* User info */}
         <div className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg",
           collapsed && "justify-center px-2"
@@ -188,7 +198,7 @@ export function AppSidebar({ userRole = "Guest", userName = "Guest User", onSign
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start gap-3 mt-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+            "w-full justify-start gap-3 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
             collapsed && "justify-center px-2"
           )}
           onClick={handleSignOut}
