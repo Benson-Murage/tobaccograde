@@ -7,19 +7,10 @@ import { QRScanner } from "@/components/qr/QRScanner";
 import { cn } from "@/lib/utils";
 import { useBales } from "@/hooks/useBales";
 import { useFarmers } from "@/hooks/useFarmers";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import {
-  Package,
-  User,
-  Scale,
-  MapPin,
-  CheckCircle,
-  ChevronRight,
-  QrCode,
-  Scan,
-  Search,
-  Printer,
-  ArrowLeft,
-  Loader2,
+  Package, User, Scale, MapPin, CheckCircle, ChevronRight,
+  QrCode, Scan, Search, Printer, ArrowLeft, Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -34,17 +25,12 @@ interface BaleFormData {
   notes: string;
 }
 
-const warehouses = [
-  { id: "WH-A", name: "Warehouse A" },
-  { id: "WH-B", name: "Warehouse B" },
-  { id: "WH-C", name: "Warehouse C" },
-];
-
 const bays = ["Bay 1", "Bay 2", "Bay 3", "Bay 4", "Bay 5"];
 
 export default function BaleRegistrationPage() {
   const { registerBale } = useBales();
   const { farmers } = useFarmers();
+  const { warehouses } = useWarehouses();
   const [step, setStep] = useState<"form" | "scanning" | "confirm" | "complete">("form");
   const [showScanner, setShowScanner] = useState(false);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
@@ -54,22 +40,16 @@ export default function BaleRegistrationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<BaleFormData>({
-    farmerSearch: "",
-    farmerId: "",
-    farmerName: "",
-    weight: "",
-    warehouse: "",
-    bay: "",
-    notes: "",
+    farmerSearch: "", farmerId: "", farmerName: "",
+    weight: "", warehouse: "", bay: "", notes: "",
   });
 
   const handleFarmerSearch = (query: string) => {
     setFormData({ ...formData, farmerSearch: query });
     if (query.length >= 2) {
       const results = farmers.filter(
-        (f) =>
-          f.full_name.toLowerCase().includes(query.toLowerCase()) ||
-          f.farmer_code.toLowerCase().includes(query.toLowerCase())
+        (f) => f.full_name.toLowerCase().includes(query.toLowerCase()) ||
+               f.farmer_code.toLowerCase().includes(query.toLowerCase())
       );
       setSearchResults(results);
       setShowSearchResults(true);
@@ -92,7 +72,6 @@ export default function BaleRegistrationPage() {
   const handleQRScan = (result: string) => {
     setScannedCode(result);
     setShowScanner(false);
-
     const farmer = farmers.find((f) => f.farmer_code === result || f.id === result);
     if (farmer) {
       selectFarmer(farmer);
@@ -107,12 +86,10 @@ export default function BaleRegistrationPage() {
       toast.error("Please fill in all required fields");
       return;
     }
-
     if (parseFloat(formData.weight) < 10 || parseFloat(formData.weight) > 100) {
       toast.error("Weight must be between 10 and 100 kg");
       return;
     }
-
     setStep("confirm");
   };
 
@@ -126,7 +103,6 @@ export default function BaleRegistrationPage() {
         batch_number: formData.bay || undefined,
         notes: formData.notes || undefined,
       });
-
       if (result.success && result.bale) {
         setGeneratedBaleCode(result.bale.bale_code);
         setStep("complete");
@@ -141,20 +117,8 @@ export default function BaleRegistrationPage() {
     }
   };
 
-  const handlePrintLabel = () => {
-    window.print();
-  };
-
   const resetForm = () => {
-    setFormData({
-      farmerSearch: "",
-      farmerId: "",
-      farmerName: "",
-      weight: "",
-      warehouse: "",
-      bay: "",
-      notes: "",
-    });
+    setFormData({ farmerSearch: "", farmerId: "", farmerName: "", weight: "", warehouse: "", bay: "", notes: "" });
     setGeneratedBaleCode(null);
     setScannedCode(null);
     setStep("form");
@@ -184,12 +148,9 @@ export default function BaleRegistrationPage() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-4">
           <Link to="/bales">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Register New Bale</h1>
@@ -205,46 +166,29 @@ export default function BaleRegistrationPage() {
         <div className="flex items-center gap-2">
           {["form", "confirm", "complete"].map((s, i) => (
             <div key={s} className="flex items-center gap-2 flex-1">
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors",
-                  step === s || ["confirm", "complete"].indexOf(step) >= i
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {i + 1}
-              </div>
-              {i < 2 && (
-                <div
-                  className={cn(
-                    "flex-1 h-1 rounded-full transition-colors",
-                    ["confirm", "complete"].indexOf(step) > i ? "bg-primary" : "bg-muted"
-                  )}
-                />
-              )}
+              <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors",
+                step === s || ["confirm", "complete"].indexOf(step) >= i
+                  ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}>{i + 1}</div>
+              {i < 2 && <div className={cn("flex-1 h-1 rounded-full transition-colors", ["confirm", "complete"].indexOf(step) > i ? "bg-primary" : "bg-muted")} />}
             </div>
           ))}
         </div>
 
-        {/* Form Step */}
         {step === "form" && (
           <div className="space-y-4">
-            {/* Quick Actions */}
             <div className="card-elevated p-4">
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setShowScanner(true)}>
-                  <Scan className="h-4 w-4 mr-2" />
-                  Scan Farmer QR
+                  <Scan className="h-4 w-4 mr-2" />Scan Farmer QR
                 </Button>
                 <Button variant="outline" className="flex-1" onClick={() => setShowScanner(true)}>
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Scan Existing Bale
+                  <QrCode className="h-4 w-4 mr-2" />Scan Existing Bale
                 </Button>
               </div>
             </div>
 
-            {/* Farmer Selection */}
             <div className="card-elevated p-6 space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -252,7 +196,6 @@ export default function BaleRegistrationPage() {
                 </div>
                 <h3 className="font-semibold text-foreground">Farmer Information</h3>
               </div>
-
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -270,29 +213,23 @@ export default function BaleRegistrationPage() {
                         className="w-full text-left px-4 py-3 hover:bg-muted transition-colors border-b border-border last:border-0"
                       >
                         <p className="font-medium text-foreground">{farmer.full_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {farmer.farmer_code} {farmer.contract_number ? `• ${farmer.contract_number}` : ''}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{farmer.farmer_code} {farmer.contract_number ? `• ${farmer.contract_number}` : ''}</p>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-
               {formData.farmerId && (
                 <div className="p-3 rounded-lg bg-success/10 border border-success/20">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-success" />
                     <span className="font-medium text-success">Farmer Selected</span>
                   </div>
-                  <p className="text-sm text-foreground mt-1">
-                    {formData.farmerName} ({formData.farmerId.substring(0, 8)}...)
-                  </p>
+                  <p className="text-sm text-foreground mt-1">{formData.farmerName}</p>
                 </div>
               )}
             </div>
 
-            {/* Weight */}
             <div className="card-elevated p-6 space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -301,12 +238,7 @@ export default function BaleRegistrationPage() {
                 <h3 className="font-semibold text-foreground">Bale Weight</h3>
               </div>
               <div className="relative">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="10"
-                  max="100"
-                  placeholder="Enter weight in kg"
+                <Input type="number" step="0.1" min="10" max="100" placeholder="Enter weight in kg"
                   value={formData.weight}
                   onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                   className="h-12 text-lg pr-12"
@@ -315,7 +247,6 @@ export default function BaleRegistrationPage() {
               </div>
             </div>
 
-            {/* Location */}
             <div className="card-elevated p-6 space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -326,8 +257,7 @@ export default function BaleRegistrationPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">Warehouse *</label>
-                  <select
-                    value={formData.warehouse}
+                  <select value={formData.warehouse}
                     onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
                     className="w-full h-12 px-4 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
@@ -339,40 +269,32 @@ export default function BaleRegistrationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">Bay</label>
-                  <select
-                    value={formData.bay}
+                  <select value={formData.bay}
                     onChange={(e) => setFormData({ ...formData, bay: e.target.value })}
                     className="w-full h-12 px-4 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Select bay</option>
-                    {bays.map((bay) => (
-                      <option key={bay} value={bay}>{bay}</option>
-                    ))}
+                    {bays.map((bay) => (<option key={bay} value={bay}>{bay}</option>))}
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* Notes */}
             <div className="card-elevated p-6 space-y-4">
               <label className="block text-sm font-medium text-muted-foreground">Notes (Optional)</label>
-              <textarea
-                placeholder="Any additional notes about this bale..."
+              <textarea placeholder="Any additional notes about this bale..."
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 className="w-full h-24 px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
               />
             </div>
 
-            {/* Submit */}
             <Button variant="enterprise" size="lg" className="w-full" onClick={handleSubmit}>
-              Continue to Review
-              <ChevronRight className="h-5 w-5 ml-1" />
+              Continue to Review <ChevronRight className="h-5 w-5 ml-1" />
             </Button>
           </div>
         )}
 
-        {/* Confirm Step */}
         {step === "confirm" && (
           <div className="space-y-6">
             <div className="card-elevated p-6 space-y-4">
@@ -399,30 +321,21 @@ export default function BaleRegistrationPage() {
                 </div>
               </div>
             </div>
-
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setStep("form")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                <ArrowLeft className="h-4 w-4 mr-2" />Back
               </Button>
               <Button variant="enterprise" className="flex-1" onClick={handleConfirm} disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Registering...
-                  </>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Registering...</>
                 ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Confirm Registration
-                  </>
+                  <><CheckCircle className="h-4 w-4 mr-2" />Confirm Registration</>
                 )}
               </Button>
             </div>
           </div>
         )}
 
-        {/* Complete Step */}
         {step === "complete" && generatedBaleCode && (
           <div className="space-y-6">
             <div className="card-elevated p-8 text-center bg-success/5 border-success/20">
@@ -430,34 +343,21 @@ export default function BaleRegistrationPage() {
                 <CheckCircle className="h-8 w-8" />
               </div>
               <h2 className="text-xl font-bold text-foreground">Bale Registered Successfully!</h2>
-              <p className="text-muted-foreground mt-2">
-                The bale has been added to the system and is ready for grading.
-              </p>
+              <p className="text-muted-foreground mt-2">The bale has been added to the system and is ready for grading.</p>
             </div>
-
             <div className="card-elevated p-8 text-center" id="print-label">
-              <QRCodeDisplay
-                value={generatedBaleCode}
-                size={180}
-                label={generatedBaleCode}
-              />
+              <QRCodeDisplay value={generatedBaleCode} size={180} label={generatedBaleCode} />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={handlePrintLabel}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Label
+              <Button variant="outline" onClick={() => window.print()}>
+                <Printer className="h-4 w-4 mr-2" />Print Label
               </Button>
               <Button variant="enterprise" onClick={resetForm}>
-                <Package className="h-4 w-4 mr-2" />
-                Register Another
+                <Package className="h-4 w-4 mr-2" />Register Another
               </Button>
             </div>
-
             <Link to="/bales" className="block">
-              <Button variant="outline" className="w-full">
-                View All Bales
-              </Button>
+              <Button variant="outline" className="w-full">View All Bales</Button>
             </Link>
           </div>
         )}
