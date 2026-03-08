@@ -139,7 +139,7 @@ export default function GradingPage() {
       const { data, error } = await supabase.functions.invoke('analyze-tobacco-leaf', {
         body: {
           image_base64: imageData.split(',')[1],
-          bale_id: currentBale.id,
+          bale_id: currentBaleData?.id || '',
         }
       });
 
