@@ -23,6 +23,10 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import ImageReviewPage from "./pages/ImageReviewPage";
 import GraderPerformancePage from "./pages/GraderPerformancePage";
 import DeviceCalibrationPage from "./pages/DeviceCalibrationPage";
+import WarehouseManagementPage from "./pages/WarehouseManagementPage";
+import SeasonManagementPage from "./pages/SeasonManagementPage";
+import ExportCertificationPage from "./pages/ExportCertificationPage";
+import TraceabilityPage from "./pages/TraceabilityPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +74,13 @@ const App = () => (
               </ProtectedRoute>
             } />
 
+            {/* Traceability - all authenticated */}
+            <Route path="/traceability" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'quality_supervisor', 'super_admin', 'auditor']}>
+                <TraceabilityPage />
+              </ProtectedRoute>
+            } />
+
             {/* Supervisor routes */}
             <Route path="/supervisor" element={
               <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
@@ -103,6 +114,21 @@ const App = () => (
             } />
 
             {/* Admin routes */}
+            <Route path="/warehouses" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
+                <WarehouseManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/seasons" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
+                <SeasonManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/export-certification" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <ExportCertificationPage />
+              </ProtectedRoute>
+            } />
             <Route path="/pricing" element={
               <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
                 <PricingPage />
