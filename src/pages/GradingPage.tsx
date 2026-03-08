@@ -475,7 +475,7 @@ export default function GradingPage() {
               </div>
               <div className="text-right text-sm text-primary-foreground/70">
                 <p>Moisture: {hardwareMoisture?.value}%</p>
-                <AuditRiskBadge score={auditRiskScore} />
+                <AuditRiskBadge score={auditRiskScore} level={auditRiskScore <= 20 ? 'low' : auditRiskScore <= 40 ? 'medium' : auditRiskScore <= 70 ? 'high' : 'critical'} />
               </div>
             </div>
           </div>
