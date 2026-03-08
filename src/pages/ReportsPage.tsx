@@ -42,65 +42,127 @@ export default function ReportsPage() {
   const { companyId } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
 
+  const buildCsvContent = async (type: string): Promise<string> => {
+    if (type === 'grading_summary' || type === 'grade_distribution') {
+      const query = supabase
+        .from('gradings')
+        .select('id, grade_code, grade_class, graded_at, moisture_percent, defect_percent, bales(bale_code, weight_kg, farmers(full_name))')
+        .order('graded_at', { ascending: false })
+        .limit(500);
+      if (companyId) query.eq('company_id', companyId);
+      const { data } = await query;
+      let csv = 'Bale Code,Farmer,Grade,Grade Class,Moisture %,Defect %,Weight (kg),Graded At\n';
+      (data || []).forEach((g: any) => {
+        csv += `${g.bales?.bale_code || ''},${g.bales?.farmers?.full_name || ''},${g.grade_code},${g.grade_class || ''},${g.moisture_percent || ''},${g.defect_percent || ''},${g.bales?.weight_kg || ''},${g.graded_at}\n`;
+      });
+      return csv;
+    } else if (type === 'farmer_payment') {
+      const query = supabase
+        .from('bales')
+        .select('bale_code, weight_kg, status, farmers(full_name, farmer_code)')
+        .order('registered_at', { ascending: false })
+        .limit(500);
+      if (companyId) query.eq('company_id', companyId);
+      const { data } = await query;
+      let csv = 'Farmer,Farmer Code,Bale Code,Weight (kg),Status\n';
+      (data || []).forEach((b: any) => {
+        csv += `${b.farmers?.full_name || ''},${b.farmers?.farmer_code || ''},${b.bale_code},${b.weight_kg},${b.status}\n`;
+      });
+      return csv;
+    } else if (type === 'dispute_log') {
+      const query = supabase
+        .from('disputes')
+        .select('id, reason, status, priority, raised_at, resolution_notes, new_grade_code')
+        .order('raised_at', { ascending: false })
+        .limit(500);
+      if (companyId) query.eq('company_id', companyId);
+      const { data } = await query;
+      let csv = 'ID,Status,Priority,Reason,Resolution,New Grade,Raised At\n';
+      (data || []).forEach((d: any) => {
+        csv += `${d.id},${d.status},${d.priority || ''},${(d.reason || '').replace(/,/g, ';')},${(d.resolution_notes || '').replace(/,/g, ';')},${d.new_grade_code || ''},${d.raised_at}\n`;
+      });
+      return csv;
+    } else if (type === 'grader_performance') {
+      const query = supabase
+        .from('grader_analytics')
+        .select('grader_id, total_gradings, consistency_score, ai_accept_rate, ai_modify_rate, ai_reject_rate, risk_score, harshness_score, period_start, period_end')
+        .order('total_gradings', { ascending: false })
+        .limit(200);
+      if (companyId) query.eq('company_id', companyId);
+      const { data } = await query;
+      let csv = 'Grader ID,Total Gradings,Consistency,AI Accept %,AI Modify %,AI Reject %,Risk Score,Harshness,Period Start,Period End\n';
+      (data || []).forEach((g: any) => {
+        csv += `${g.grader_id},${g.total_gradings},${g.consistency_score || ''},${g.ai_accept_rate || ''},${g.ai_modify_rate || ''},${g.ai_reject_rate || ''},${g.risk_score || ''},${g.harshness_score || ''},${g.period_start},${g.period_end}\n`;
+      });
+      return csv;
+    } else if (type === 'seasonal_summary') {
+      const query = supabase
+        .from('bales')
+        .select('bale_code, weight_kg, status, registered_at, farmers(full_name), warehouses:warehouse_id(name)')
+        .order('registered_at', { ascending: false })
+        .limit(500);
+      if (companyId) query.eq('company_id', companyId);
+      const { data } = await query;
+      let csv = 'Bale Code,Farmer,Warehouse,Weight (kg),Status,Registered At\n';
+      (data || []).forEach((b: any) => {
+        csv += `${b.bale_code},${b.farmers?.full_name || ''},${b.warehouses?.name || ''},${b.weight_kg},${b.status},${b.registered_at}\n`;
+      });
+      return csv;
+    }
+    return '';
+  };
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportReport = useCallback(async (type: string, format: 'csv' | 'pdf') => {
     setExporting(`${type}-${format}`);
     try {
-      let csvContent = '';
-      let filename = `${type}-${new Date().toISOString().split('T')[0]}`;
+      const filename = `${type}-${new Date().toISOString().split('T')[0]}`;
+      const csvContent = await buildCsvContent(type);
 
-      if (type === 'grading_summary' || type === 'grade_distribution') {
-        const query = supabase
-          .from('gradings')
-          .select('id, grade_code, grade_class, graded_at, moisture_percent, defect_percent, bales(bale_code, weight_kg, farmers(full_name))')
-          .order('graded_at', { ascending: false })
-          .limit(500);
-        if (companyId) query.eq('company_id', companyId);
-        const { data } = await query;
-        
-        csvContent = 'Bale Code,Farmer,Grade,Grade Class,Moisture %,Defect %,Weight (kg),Graded At\n';
-        (data || []).forEach((g: any) => {
-          csvContent += `${g.bales?.bale_code || ''},${g.bales?.farmers?.full_name || ''},${g.grade_code},${g.grade_class || ''},${g.moisture_percent || ''},${g.defect_percent || ''},${g.bales?.weight_kg || ''},${g.graded_at}\n`;
-        });
-      } else if (type === 'farmer_payment') {
-        const query = supabase
-          .from('bales')
-          .select('bale_code, weight_kg, status, farmers(full_name, farmer_code)')
-          .order('registered_at', { ascending: false })
-          .limit(500);
-        if (companyId) query.eq('company_id', companyId);
-        const { data } = await query;
-        
-        csvContent = 'Farmer,Farmer Code,Bale Code,Weight (kg),Status\n';
-        (data || []).forEach((b: any) => {
-          csvContent += `${b.farmers?.full_name || ''},${b.farmers?.farmer_code || ''},${b.bale_code},${b.weight_kg},${b.status}\n`;
-        });
-      } else if (type === 'dispute_log') {
-        const query = supabase
-          .from('disputes')
-          .select('id, reason, status, priority, raised_at, resolution_notes, new_grade_code')
-          .order('raised_at', { ascending: false })
-          .limit(500);
-        if (companyId) query.eq('company_id', companyId);
-        const { data } = await query;
-        
-        csvContent = 'ID,Status,Priority,Reason,Resolution,New Grade,Raised At\n';
-        (data || []).forEach((d: any) => {
-          csvContent += `${d.id},${d.status},${d.priority || ''},${(d.reason || '').replace(/,/g, ';')},${(d.resolution_notes || '').replace(/,/g, ';')},${d.new_grade_code || ''},${d.raised_at}\n`;
-        });
-      } else {
-        toast.info("Report generation in progress", { description: "This report type will be available soon." });
+      if (!csvContent) {
+        toast.error("No data available for this report");
         setExporting(null);
         return;
       }
 
       if (format === 'csv') {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${filename}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadFile(csvContent, `${filename}.csv`, 'text/csv;charset=utf-8;');
+      } else if (format === 'pdf') {
+        // Generate a simple text-based PDF alternative (printable HTML)
+        const rows = csvContent.split('\n').filter(Boolean);
+        const headers = rows[0].split(',');
+        let html = `<!DOCTYPE html><html><head><title>${filename}</title>
+          <style>body{font-family:Arial,sans-serif;margin:40px;}h1{color:#1a3a2a;font-size:20px;}
+          table{border-collapse:collapse;width:100%;margin-top:20px;}
+          th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:11px;}
+          th{background:#1a3a2a;color:white;}tr:nth-child(even){background:#f9f9f9;}
+          .footer{margin-top:20px;font-size:10px;color:#888;}</style></head><body>
+          <h1>LeafGrade - ${type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</h1>
+          <p>Generated: ${new Date().toLocaleString()}</p><table><thead><tr>`;
+        headers.forEach(h => { html += `<th>${h}</th>`; });
+        html += '</tr></thead><tbody>';
+        rows.slice(1).forEach(row => {
+          html += '<tr>';
+          row.split(',').forEach(cell => { html += `<td>${cell}</td>`; });
+          html += '</tr>';
+        });
+        html += '</tbody></table><p class="footer">LeafGrade Tobacco Grading Platform - Confidential</p></body></html>';
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.print();
+        }
       }
 
       await logAudit({
