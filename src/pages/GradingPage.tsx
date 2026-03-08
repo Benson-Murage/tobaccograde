@@ -642,7 +642,7 @@ export default function GradingPage() {
         {priceBreakdown && gradeResult && (
           <PriceBreakdownCard
             breakdown={priceBreakdown}
-            weightKg={currentBale.weight}
+            weightKg={hardwareWeight?.value || 0}
             gradeCode={gradeResult.grade}
             showFarmerView={false}
           />
