@@ -27,6 +27,7 @@ import {
   LEAF_POSITIONS,
   TOBACCO_COLORS,
   TOBACCO_TEXTURES,
+  TOBACCO_MATURITY,
   generateGradeCode,
   validateMoisture,
   calculateTobaccoPrice,
@@ -59,16 +60,7 @@ import {
 // Workflow step type
 type WorkflowStep = 'hardware' | 'grading';
 
-// Mock bale data
-const currentBale = {
-  id: "bale-001",
-  code: "BL-2024-00848",
-  farmer: "Peter Nyambi",
-  farmerId: "FRM-001234",
-  weight: 42.5,
-  deliveryDate: "2024-01-12",
-  warehouse: "Warehouse A - Bay 3",
-};
+// No mock data - bale info comes from hardware workflow
 
 export default function GradingPage() {
   const navigate = useNavigate();
@@ -148,7 +140,7 @@ export default function GradingPage() {
       const { data, error } = await supabase.functions.invoke('analyze-tobacco-leaf', {
         body: {
           image_base64: imageData.split(',')[1],
-          bale_id: currentBale.id,
+          bale_id: currentBaleData?.id || '',
         }
       });
 
@@ -268,7 +260,7 @@ export default function GradingPage() {
       qualityBand: gradeResult.eligibility?.suggestedQualityBand || 2,
       moisturePercent,
       defectPercent,
-      weightKg: currentBale.weight,
+      weightKg: hardwareWeight?.value || 0,
     });
   }, [position, color, texture, gradeResult, moisturePercent, defectPercent]);
 
@@ -463,30 +455,32 @@ export default function GradingPage() {
         </div>
 
         {/* Current Bale Info */}
-        <div className="card-elevated p-6 gradient-hero text-primary-foreground">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                <span className="font-mono text-lg font-bold">{currentBale.code}</span>
+        {currentBaleData && hardwareWeight && (
+          <div className="card-elevated p-6 gradient-hero text-primary-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  <span className="font-mono text-lg font-bold">{currentBaleData.code}</span>
+                </div>
+                <div className="flex items-center gap-4 text-primary-foreground/80 text-sm">
+                  <span className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    {currentBaleData.farmerName}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Scale className="h-4 w-4" />
+                    {hardwareWeight.value} kg
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-primary-foreground/80 text-sm">
-                <span className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  {currentBale.farmer}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Scale className="h-4 w-4" />
-                  {currentBale.weight} kg
-                </span>
+              <div className="text-right text-sm text-primary-foreground/70">
+                <p>Moisture: {hardwareMoisture?.value}%</p>
+                <AuditRiskBadge score={auditRiskScore} level={auditRiskScore <= 20 ? 'low' : auditRiskScore <= 40 ? 'medium' : auditRiskScore <= 70 ? 'high' : 'critical'} />
               </div>
-            </div>
-            <div className="text-right text-sm text-primary-foreground/70">
-              <p>{currentBale.warehouse}</p>
-              <p>{currentBale.deliveryDate}</p>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Captured Image Preview */}
         {capturedImage && (
@@ -558,7 +552,7 @@ export default function GradingPage() {
           {/* Color */}
           <div className="card-elevated p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-300 to-amber-600 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/20 text-warning">
                 <span className="font-bold text-sm">CLR</span>
               </div>
               <h3 className="font-semibold text-foreground">Color</h3>
@@ -581,7 +575,65 @@ export default function GradingPage() {
             </div>
           </div>
 
-          {/* Moisture */}
+          {/* Texture */}
+          <div className="card-elevated p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Leaf className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-foreground">Texture / Body</h3>
+              {aiDecisions.texture?.decision === 'accept' && (
+                <Badge variant="secondary" className="bg-success/20 text-success">AI Accepted</Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {(Object.keys(TOBACCO_TEXTURES) as TobaccoTexture[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTexture(t)}
+                  className={cn(
+                    "grading-button rounded-lg border-2 font-medium transition-all p-3",
+                    texture === t
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  <div className="text-lg font-bold">{TOBACCO_TEXTURES[t].code}</div>
+                  <div className="text-xs">{TOBACCO_TEXTURES[t].label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Maturity */}
+          <div className="card-elevated p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Leaf className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-foreground">Maturity</h3>
+              {aiDecisions.maturity?.decision === 'accept' && (
+                <Badge variant="secondary" className="bg-success/20 text-success">AI Accepted</Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {(Object.keys(TOBACCO_MATURITY) as TobaccoMaturity[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMaturity(m)}
+                  className={cn(
+                    "grading-button rounded-lg border-2 font-medium transition-all p-3",
+                    maturity === m
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  {TOBACCO_MATURITY[m].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="card-elevated p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -649,7 +701,7 @@ export default function GradingPage() {
         {priceBreakdown && gradeResult && (
           <PriceBreakdownCard
             breakdown={priceBreakdown}
-            weightKg={currentBale.weight}
+            weightKg={hardwareWeight?.value || 0}
             gradeCode={gradeResult.grade}
             showFarmerView={false}
           />

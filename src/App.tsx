@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Index from "./pages/Index";
 import GradingPage from "./pages/GradingPage";
 import FarmersPage from "./pages/FarmersPage";
@@ -30,21 +31,77 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            {/* Public routes */}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            <Route path="/grading" element={<GradingPage />} />
-            <Route path="/grading/scan" element={<ScanPage />} />
-            <Route path="/farmers" element={<FarmersPage />} />
-            <Route path="/bales" element={<BalesPage />} />
-            <Route path="/bales/new" element={<BaleRegistrationPage />} />
-            <Route path="/scan" element={<ScanPage />} />
-            <Route path="/disputes" element={<DisputesPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/audit" element={<AuditPage />} />
-            <Route path="/supervisor" element={<SupervisorPage />} />
+
+            {/* Protected routes - any authenticated user */}
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
+
+            {/* Grader routes */}
+            <Route path="/grading" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'super_admin']}>
+                <GradingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/grading/scan" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'super_admin']}>
+                <ScanPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/bales" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'quality_supervisor', 'super_admin']}>
+                <BalesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/bales/new" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'super_admin']}>
+                <BaleRegistrationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/farmers" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'quality_supervisor', 'super_admin']}>
+                <FarmersPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Supervisor routes */}
+            <Route path="/supervisor" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <SupervisorPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/disputes" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <DisputesPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin routes */}
+            <Route path="/pricing" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
+                <PricingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'quality_supervisor', 'auditor', 'super_admin']}>
+                <ReportsPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Auditor routes */}
+            <Route path="/audit" element={
+              <ProtectedRoute requiredRoles={['auditor', 'company_admin', 'super_admin']}>
+                <AuditPage />
+              </ProtectedRoute>
+            } />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
