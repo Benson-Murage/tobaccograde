@@ -27,6 +27,7 @@ export type AuditAction =
   | 'SYNC'
   | 'DEVICE_REGISTER'
   | 'DEVICE_TRUST'
+  | 'CALIBRATE'
   | 'PERMISSION_CHANGE';
 
 export type EntityType = 
@@ -262,6 +263,7 @@ export function formatAuditAction(action: AuditAction): string {
     SYNC: 'Synced data',
     DEVICE_REGISTER: 'Registered device',
     DEVICE_TRUST: 'Trusted device',
+    CALIBRATE: 'Calibrated device',
     PERMISSION_CHANGE: 'Changed permissions',
   };
   return labels[action] ?? action;

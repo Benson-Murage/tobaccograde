@@ -19,6 +19,10 @@ import AuditPage from "./pages/AuditPage";
 import AuthPage from "./pages/AuthPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import SupervisorPage from "./pages/SupervisorPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ImageReviewPage from "./pages/ImageReviewPage";
+import GraderPerformancePage from "./pages/GraderPerformancePage";
+import DeviceCalibrationPage from "./pages/DeviceCalibrationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,6 +79,26 @@ const App = () => (
             <Route path="/disputes" element={
               <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
                 <DisputesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin', 'auditor']}>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/image-review" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <ImageReviewPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/grader-performance" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <GraderPerformancePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/device-calibration" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
+                <DeviceCalibrationPage />
               </ProtectedRoute>
             } />
 
