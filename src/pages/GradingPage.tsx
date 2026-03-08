@@ -575,7 +575,65 @@ export default function GradingPage() {
             </div>
           </div>
 
-          {/* Moisture */}
+          {/* Texture */}
+          <div className="card-elevated p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Leaf className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-foreground">Texture / Body</h3>
+              {aiDecisions.texture?.decision === 'accept' && (
+                <Badge variant="secondary" className="bg-success/20 text-success">AI Accepted</Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {(Object.keys(TOBACCO_TEXTURES) as TobaccoTexture[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTexture(t)}
+                  className={cn(
+                    "grading-button rounded-lg border-2 font-medium transition-all p-3",
+                    texture === t
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  <div className="text-lg font-bold">{TOBACCO_TEXTURES[t].code}</div>
+                  <div className="text-xs">{TOBACCO_TEXTURES[t].label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Maturity */}
+          <div className="card-elevated p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Leaf className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-foreground">Maturity</h3>
+              {aiDecisions.maturity?.decision === 'accept' && (
+                <Badge variant="secondary" className="bg-success/20 text-success">AI Accepted</Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {(Object.keys(TOBACCO_MATURITY) as TobaccoMaturity[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMaturity(m)}
+                  className={cn(
+                    "grading-button rounded-lg border-2 font-medium transition-all p-3",
+                    maturity === m
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  {TOBACCO_MATURITY[m].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="card-elevated p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
