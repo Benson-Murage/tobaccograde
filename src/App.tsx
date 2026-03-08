@@ -81,6 +81,26 @@ const App = () => (
                 <DisputesPage />
               </ProtectedRoute>
             } />
+            <Route path="/analytics" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin', 'auditor']}>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/image-review" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <ImageReviewPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/grader-performance" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <GraderPerformancePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/device-calibration" element={
+              <ProtectedRoute requiredRoles={['company_admin', 'super_admin']}>
+                <DeviceCalibrationPage />
+              </ProtectedRoute>
+            } />
 
             {/* Admin routes */}
             <Route path="/pricing" element={

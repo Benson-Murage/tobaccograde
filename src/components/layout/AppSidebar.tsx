@@ -35,6 +35,9 @@ const navigation = [
 
 const adminNavigation = [
   { name: "Supervisor", href: "/supervisor", icon: Eye },
+  { name: "Image Review", href: "/image-review", icon: Eye },
+  { name: "Grader Performance", href: "/grader-performance", icon: BarChart3 },
+  { name: "Device Calibration", href: "/device-calibration", icon: Settings },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Audit Logs", href: "/audit", icon: Shield },
 ];
