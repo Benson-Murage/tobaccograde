@@ -552,7 +552,7 @@ export default function GradingPage() {
           {/* Color */}
           <div className="card-elevated p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-300 to-amber-600 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/20 text-warning">
                 <span className="font-bold text-sm">CLR</span>
               </div>
               <h3 className="font-semibold text-foreground">Color</h3>
