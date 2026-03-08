@@ -293,8 +293,10 @@ export default function ReportsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1" disabled>
-                      <FileText className="h-3.5 w-3.5 mr-1" />PDF
+                    <Button variant="outline" size="sm" className="flex-1"
+                      onClick={() => exportReport(report.type, 'pdf')} disabled={!!exporting}>
+                      {exporting === `${report.type}-pdf` ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <FileText className="h-3.5 w-3.5 mr-1" />}
+                      PDF
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1"
                       onClick={() => exportReport(report.type, 'csv')} disabled={!!exporting}>
