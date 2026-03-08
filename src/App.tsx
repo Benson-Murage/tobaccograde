@@ -29,6 +29,10 @@ import WarehouseManagementPage from "./pages/WarehouseManagementPage";
 import SeasonManagementPage from "./pages/SeasonManagementPage";
 import ExportCertificationPage from "./pages/ExportCertificationPage";
 import TraceabilityPage from "./pages/TraceabilityPage";
+import DiseaseDetectionPage from "./pages/DiseaseDetectionPage";
+import BlockchainLedgerPage from "./pages/BlockchainLedgerPage";
+import FarmVerificationPage from "./pages/FarmVerificationPage";
+import HarvestPredictionPage from "./pages/HarvestPredictionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -153,6 +157,28 @@ const App = () => (
             <Route path="/audit" element={
               <ProtectedRoute requiredRoles={['auditor', 'company_admin', 'super_admin']}>
                 <AuditPage />
+              </ProtectedRoute>
+            } />
+
+            {/* AI & Advanced modules */}
+            <Route path="/disease-detection" element={
+              <ProtectedRoute requiredRoles={['grader', 'quality_supervisor', 'company_admin', 'super_admin']}>
+                <DiseaseDetectionPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/blockchain-ledger" element={
+              <ProtectedRoute requiredRoles={['auditor', 'quality_supervisor', 'company_admin', 'super_admin']}>
+                <BlockchainLedgerPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/farm-verification" element={
+              <ProtectedRoute requiredRoles={['quality_supervisor', 'company_admin', 'super_admin']}>
+                <FarmVerificationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/harvest-prediction" element={
+              <ProtectedRoute requiredRoles={['grader', 'quality_supervisor', 'company_admin', 'super_admin']}>
+                <HarvestPredictionPage />
               </ProtectedRoute>
             } />
 

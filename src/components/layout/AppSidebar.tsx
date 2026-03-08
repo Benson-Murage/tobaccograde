@@ -24,6 +24,10 @@ import {
   Gauge,
   Camera,
   Wrench,
+  Bug,
+  Link2,
+  Satellite,
+  Sprout,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,6 +45,8 @@ const navigation = [
   { name: "Disputes", href: "/disputes", icon: AlertTriangle },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Analytics", href: "/analytics", icon: Gauge },
+  { name: "Disease Detection", href: "/disease-detection", icon: Bug },
+  { name: "Harvest Prediction", href: "/harvest-prediction", icon: Sprout },
 ];
 
 const adminNavigation = [
@@ -51,6 +57,8 @@ const adminNavigation = [
   { name: "Image Review", href: "/image-review", icon: Camera },
   { name: "Grader Perf.", href: "/grader-performance", icon: BarChart3 },
   { name: "Calibration", href: "/device-calibration", icon: Wrench },
+  { name: "Blockchain Ledger", href: "/blockchain-ledger", icon: Link2 },
+  { name: "Farm Verification", href: "/farm-verification", icon: Satellite },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Audit Logs", href: "/audit", icon: Shield },
 ];

@@ -568,6 +568,92 @@ export type Database = {
           },
         ]
       }
+      disease_detections: {
+        Row: {
+          affected_area_percent: number | null
+          ai_raw_response: Json | null
+          bale_id: string | null
+          company_id: string
+          confidence: number
+          created_at: string
+          disease_name: string
+          grader_decision: string | null
+          grader_id: string | null
+          grader_override_reason: string | null
+          grading_id: string | null
+          grading_image_id: string | null
+          id: string
+          processing_time_ms: number | null
+          recommended_action: string | null
+          risk_level: string
+        }
+        Insert: {
+          affected_area_percent?: number | null
+          ai_raw_response?: Json | null
+          bale_id?: string | null
+          company_id: string
+          confidence: number
+          created_at?: string
+          disease_name: string
+          grader_decision?: string | null
+          grader_id?: string | null
+          grader_override_reason?: string | null
+          grading_id?: string | null
+          grading_image_id?: string | null
+          id?: string
+          processing_time_ms?: number | null
+          recommended_action?: string | null
+          risk_level?: string
+        }
+        Update: {
+          affected_area_percent?: number | null
+          ai_raw_response?: Json | null
+          bale_id?: string | null
+          company_id?: string
+          confidence?: number
+          created_at?: string
+          disease_name?: string
+          grader_decision?: string | null
+          grader_id?: string | null
+          grader_override_reason?: string | null
+          grading_id?: string | null
+          grading_image_id?: string | null
+          id?: string
+          processing_time_ms?: number | null
+          recommended_action?: string | null
+          risk_level?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disease_detections_bale_id_fkey"
+            columns: ["bale_id"]
+            isOneToOne: false
+            referencedRelation: "bales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disease_detections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disease_detections_grading_id_fkey"
+            columns: ["grading_id"]
+            isOneToOne: false
+            referencedRelation: "gradings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disease_detections_grading_image_id_fkey"
+            columns: ["grading_image_id"]
+            isOneToOne: false
+            referencedRelation: "grading_images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disputes: {
         Row: {
           company_id: string
@@ -763,6 +849,69 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      farm_verifications: {
+        Row: {
+          company_id: string
+          created_at: string
+          crop_health_score: number | null
+          declared_area_hectares: number | null
+          discrepancy_notes: string | null
+          farmer_id: string
+          id: string
+          satellite_image_url: string | null
+          updated_at: string
+          verification_status: string
+          verified_area_hectares: number | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          crop_health_score?: number | null
+          declared_area_hectares?: number | null
+          discrepancy_notes?: string | null
+          farmer_id: string
+          id?: string
+          satellite_image_url?: string | null
+          updated_at?: string
+          verification_status?: string
+          verified_area_hectares?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          crop_health_score?: number | null
+          declared_area_hectares?: number | null
+          discrepancy_notes?: string | null
+          farmer_id?: string
+          id?: string
+          satellite_image_url?: string | null
+          updated_at?: string
+          verification_status?: string
+          verified_area_hectares?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_verifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farm_verifications_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
             referencedColumns: ["id"]
           },
         ]
@@ -1282,6 +1431,78 @@ export type Database = {
           },
         ]
       }
+      harvest_predictions: {
+        Row: {
+          ai_analysis: Json | null
+          company_id: string
+          confidence: number | null
+          created_at: string
+          currency: string | null
+          farmer_id: string
+          field_image_url: string | null
+          id: string
+          override_by: string | null
+          override_grade: string | null
+          override_reason: string | null
+          predicted_grade: string | null
+          predicted_grade_class: string | null
+          predicted_value: number | null
+          predicted_yield_kg: number | null
+          processing_time_ms: number | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          company_id: string
+          confidence?: number | null
+          created_at?: string
+          currency?: string | null
+          farmer_id: string
+          field_image_url?: string | null
+          id?: string
+          override_by?: string | null
+          override_grade?: string | null
+          override_reason?: string | null
+          predicted_grade?: string | null
+          predicted_grade_class?: string | null
+          predicted_value?: number | null
+          predicted_yield_kg?: number | null
+          processing_time_ms?: number | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          company_id?: string
+          confidence?: number | null
+          created_at?: string
+          currency?: string | null
+          farmer_id?: string
+          field_image_url?: string | null
+          id?: string
+          override_by?: string | null
+          override_grade?: string | null
+          override_reason?: string | null
+          predicted_grade?: string | null
+          predicted_grade_class?: string | null
+          predicted_value?: number | null
+          predicted_yield_kg?: number | null
+          processing_time_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "harvest_predictions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "harvest_predictions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_usage: {
         Row: {
           company_id: string
@@ -1647,6 +1868,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sync_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traceability_ledger: {
+        Row: {
+          actor_id: string | null
+          batch_id: string | null
+          block_number: number
+          company_id: string
+          created_at: string
+          device_id: string | null
+          event_data: Json
+          event_type: string
+          id: string
+          previous_hash: string | null
+          record_hash: string
+        }
+        Insert: {
+          actor_id?: string | null
+          batch_id?: string | null
+          block_number?: number
+          company_id: string
+          created_at?: string
+          device_id?: string | null
+          event_data?: Json
+          event_type: string
+          id?: string
+          previous_hash?: string | null
+          record_hash: string
+        }
+        Update: {
+          actor_id?: string | null
+          batch_id?: string | null
+          block_number?: number
+          company_id?: string
+          created_at?: string
+          device_id?: string | null
+          event_data?: Json
+          event_type?: string
+          id?: string
+          previous_hash?: string | null
+          record_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traceability_ledger_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "bales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traceability_ledger_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
