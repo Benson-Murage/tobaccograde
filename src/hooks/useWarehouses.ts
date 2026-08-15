@@ -21,7 +21,7 @@ export function useWarehouses() {
 
   const fetchWarehouses = useCallback(async () => {
     if (!companyId) {
-      setWarehouses(getDemoWarehouses());
+      setWarehouses([]);
       setIsLoading(false);
       return;
     }
@@ -36,10 +36,10 @@ export function useWarehouses() {
         .order('name');
 
       if (error) throw error;
-      setWarehouses(data && data.length > 0 ? data : getDemoWarehouses());
+      setWarehouses(data ?? []);
     } catch (err) {
       console.error('Error fetching warehouses:', err);
-      setWarehouses(getDemoWarehouses());
+      setWarehouses([]);
     } finally {
       setIsLoading(false);
     }
@@ -50,12 +50,4 @@ export function useWarehouses() {
   }, [fetchWarehouses]);
 
   return { warehouses, isLoading, refetch: fetchWarehouses };
-}
-
-function getDemoWarehouses(): Warehouse[] {
-  return [
-    { id: 'wh-a', name: 'Warehouse A', code: 'WH-A', location: 'Main Complex', is_active: true },
-    { id: 'wh-b', name: 'Warehouse B', code: 'WH-B', location: 'East Wing', is_active: true },
-    { id: 'wh-c', name: 'Warehouse C', code: 'WH-C', location: 'West Wing', is_active: true },
-  ];
 }

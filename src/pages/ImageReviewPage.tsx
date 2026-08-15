@@ -50,7 +50,7 @@ export default function ImageReviewPage() {
 
   const fetchImages = async () => {
     if (!companyId) {
-      setImages(getDemoImages());
+      setImages([]);
       setIsLoading(false);
       return;
     }
@@ -84,10 +84,10 @@ export default function ImageReviewPage() {
         grade_class: img.gradings?.grade_class,
       }));
 
-      setImages(transformed.length > 0 ? transformed : getDemoImages());
+      setImages(transformed);
     } catch (error) {
       console.error('Image fetch error:', error);
-      setImages(getDemoImages());
+      setImages([]);
     } finally {
       setIsLoading(false);
     }
@@ -266,20 +266,4 @@ export default function ImageReviewPage() {
       </div>
     </AppLayout>
   );
-}
-
-function getDemoImages(): GradingImage[] {
-  return Array.from({ length: 8 }, (_, i) => ({
-    id: `demo-${i}`,
-    image_url: '/placeholder.svg',
-    image_type: 'primary',
-    captured_at: new Date(Date.now() - i * 3600000).toISOString(),
-    device_id: 'CAM-001',
-    bale_id: `bale-${i}`,
-    grading_id: `grading-${i}`,
-    bale_code: `BL-2024-00${847 - i}`,
-    farmer_name: ['Peter Nyambi', 'Sarah Tembo', 'John Phiri', 'Grace Mwanza'][i % 4],
-    grade_code: ['L1F', 'L2F', 'C1F', 'X2R', 'L3F'][i % 5],
-    grade_class: ['premium', 'good', 'standard', 'low', 'good'][i % 5],
-  }));
 }

@@ -49,7 +49,8 @@ export function useDisputes() {
 
   const fetchDisputes = useCallback(async () => {
     if (!companyId) {
-      setDisputes(getDemoDisputes());
+      setDisputes([]);
+      setError('Your account is not linked to a company yet. Contact your administrator.');
       setIsLoading(false);
       return;
     }
@@ -107,8 +108,8 @@ export function useDisputes() {
       setDisputes(transformed);
     } catch (err) {
       console.error('Error fetching disputes:', err);
-      setError('Failed to load disputes');
-      setDisputes(getDemoDisputes());
+      setError(err instanceof Error ? err.message : 'Failed to load disputes');
+      setDisputes([]);
     } finally {
       setIsLoading(false);
     }
@@ -124,23 +125,7 @@ export function useDisputes() {
     }
 
     if (!companyId) {
-      const newDispute: Dispute = {
-        id: crypto.randomUUID(),
-        grading_id: formData.grading_id,
-        company_id: 'demo',
-        raised_by: 'demo-user',
-        raised_at: new Date().toISOString(),
-        reason: formData.reason,
-        status: 'open',
-        priority: formData.priority || 'medium',
-        resolution_notes: null,
-        new_grade_code: formData.requested_grade || null,
-        resolved_by: null,
-        resolved_at: null,
-        evidence_urls: formData.evidence_urls || null,
-      };
-      setDisputes(prev => [newDispute, ...prev]);
-      return { success: true, dispute: newDispute };
+      return { success: false, error: 'Your account is not linked to a company yet.' };
     }
 
     try {
@@ -173,7 +158,7 @@ export function useDisputes() {
       return { success: true, dispute: data };
     } catch (err) {
       console.error('Error creating dispute:', err);
-      return { success: false, error: 'Failed to create dispute' };
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to create dispute' };
     }
   };
 
@@ -181,14 +166,6 @@ export function useDisputes() {
     setIsProcessing(true);
     
     try {
-      if (!companyId) {
-        setDisputes(prev => prev.map(d => 
-          d.id === id ? { ...d, status: 'under_review' as const } : d
-        ));
-        toast.success('Dispute is now under review');
-        return { success: true };
-      }
-
       const { error: updateError } = await supabase
         .from('disputes')
         .update({ 
@@ -214,8 +191,9 @@ export function useDisputes() {
       return { success: true };
     } catch (err) {
       console.error('Error reviewing dispute:', err);
-      toast.error('Failed to update dispute');
-      return { success: false, error: 'Failed to update dispute' };
+      const message = err instanceof Error ? err.message : 'Failed to update dispute';
+      toast.error(message);
+      return { success: false, error: message };
     } finally {
       setIsProcessing(false);
     }
@@ -232,20 +210,6 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
-      if (!companyId) {
-        setDisputes(prev => prev.map(d => 
-          d.id === id ? { 
-            ...d, 
-            status: 'resolved' as const,
-            resolution_notes: resolution.notes,
-            new_grade_code: resolution.new_grade || null,
-            resolved_at: new Date().toISOString(),
-          } : d
-        ));
-        toast.success('Dispute resolved successfully');
-        return { success: true };
-      }
-
       const { error: updateError } = await supabase
         .from('disputes')
         .update({
@@ -280,8 +244,9 @@ export function useDisputes() {
       return { success: true };
     } catch (err) {
       console.error('Error resolving dispute:', err);
-      toast.error('Failed to resolve dispute');
-      return { success: false, error: 'Failed to resolve dispute' };
+      const message = err instanceof Error ? err.message : 'Failed to resolve dispute';
+      toast.error(message);
+      return { success: false, error: message };
     } finally {
       setIsProcessing(false);
     }
@@ -295,19 +260,6 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
-      if (!companyId) {
-        setDisputes(prev => prev.map(d => 
-          d.id === id ? { 
-            ...d, 
-            status: 'closed' as const,
-            resolution_notes: `REJECTED: ${reason}`,
-            resolved_at: new Date().toISOString(),
-          } : d
-        ));
-        toast.success('Dispute rejected');
-        return { success: true };
-      }
-
       const { error: updateError } = await supabase
         .from('disputes')
         .update({
@@ -341,8 +293,9 @@ export function useDisputes() {
       return { success: true };
     } catch (err) {
       console.error('Error rejecting dispute:', err);
-      toast.error('Failed to reject dispute');
-      return { success: false, error: 'Failed to reject dispute' };
+      const message = err instanceof Error ? err.message : 'Failed to reject dispute';
+      toast.error(message);
+      return { success: false, error: message };
     } finally {
       setIsProcessing(false);
     }
@@ -352,14 +305,6 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
-      if (!companyId) {
-        setDisputes(prev => prev.map(d => 
-          d.id === id ? { ...d, status: 'escalated' as const, priority: 'high' } : d
-        ));
-        toast.success('Dispute escalated to supervisor');
-        return { success: true };
-      }
-
       const { error: updateError } = await supabase
         .from('disputes')
         .update({ 
@@ -386,8 +331,9 @@ export function useDisputes() {
       return { success: true };
     } catch (err) {
       console.error('Error escalating dispute:', err);
-      toast.error('Failed to escalate dispute');
-      return { success: false, error: 'Failed to escalate dispute' };
+      const message = err instanceof Error ? err.message : 'Failed to escalate dispute';
+      toast.error(message);
+      return { success: false, error: message };
     } finally {
       setIsProcessing(false);
     }
@@ -417,64 +363,3 @@ export function useDisputes() {
   };
 }
 
-function getDemoDisputes(): Dispute[] {
-  return [
-    {
-      id: 'DSP-001',
-      grading_id: 'grading-001',
-      company_id: 'demo',
-      raised_by: 'farmer-001',
-      raised_at: '2024-01-12T10:30:00Z',
-      reason: 'Farmer disputes color assessment. Claims tobacco was lemon, not reddish.',
-      status: 'open',
-      priority: 'high',
-      resolution_notes: null,
-      new_grade_code: 'L3F',
-      resolved_by: null,
-      resolved_at: null,
-      evidence_urls: null,
-      bale_code: 'BL-2024-00845',
-      farmer_name: 'John Phiri',
-      farmer_id: 'FRM-001236',
-      original_grade: 'C2F',
-    },
-    {
-      id: 'DSP-002',
-      grading_id: 'grading-002',
-      company_id: 'demo',
-      raised_by: 'farmer-002',
-      raised_at: '2024-01-11T14:22:00Z',
-      reason: 'Moisture reading disputed. Farmer has independent test showing 15%.',
-      status: 'under_review',
-      priority: 'medium',
-      resolution_notes: null,
-      new_grade_code: 'C3F',
-      resolved_by: null,
-      resolved_at: null,
-      evidence_urls: null,
-      bale_code: 'BL-2024-00839',
-      farmer_name: 'Mary Banda',
-      farmer_id: 'FRM-001240',
-      original_grade: 'X1F',
-    },
-    {
-      id: 'DSP-003',
-      grading_id: 'grading-003',
-      company_id: 'demo',
-      raised_by: 'farmer-003',
-      raised_at: '2024-01-10T09:15:00Z',
-      reason: 'Claims defect assessment was incorrect. Requesting re-inspection.',
-      status: 'resolved',
-      priority: 'low',
-      resolution_notes: 'Re-inspection confirmed original grade was accurate.',
-      new_grade_code: null,
-      resolved_by: 'supervisor-001',
-      resolved_at: '2024-01-10T16:00:00Z',
-      evidence_urls: null,
-      bale_code: 'BL-2024-00832',
-      farmer_name: 'Peter Nyambi',
-      farmer_id: 'FRM-001234',
-      original_grade: 'L4F',
-    },
-  ];
-}

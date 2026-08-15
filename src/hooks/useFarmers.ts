@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logAudit } from '@/lib/audit-logger';
 
 export interface Farmer {
   id: string;
@@ -41,8 +42,8 @@ export function useFarmers() {
 
   const fetchFarmers = useCallback(async () => {
     if (!companyId) {
-      // For demo mode, use mock data
-      setFarmers(getDemoFarmers());
+      setFarmers([]);
+      setError('Your account is not linked to a company yet. Contact your administrator.');
       setIsLoading(false);
       return;
     }
@@ -64,9 +65,8 @@ export function useFarmers() {
       setFarmers(data || []);
     } catch (err) {
       console.error('Error fetching farmers:', err);
-      setError('Failed to load farmers');
-      // Fall back to demo data
-      setFarmers(getDemoFarmers());
+      setError(err instanceof Error ? err.message : 'Failed to load farmers');
+      setFarmers([]);
     } finally {
       setIsLoading(false);
     }
@@ -84,23 +84,7 @@ export function useFarmers() {
 
   const addFarmer = async (formData: FarmerFormData): Promise<{ success: boolean; farmer?: Farmer; error?: string }> => {
     if (!companyId) {
-      // Demo mode - add to local state
-      const newFarmer: Farmer = {
-        id: crypto.randomUUID(),
-        farmer_code: generateFarmerCode(),
-        full_name: formData.full_name,
-        national_id: formData.national_id || null,
-        contract_number: formData.contract_number || null,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        farm_location: formData.farm_location || null,
-        is_active: true,
-        company_id: 'demo',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setFarmers(prev => [newFarmer, ...prev]);
-      return { success: true, farmer: newFarmer };
+      return { success: false, error: 'Your account is not linked to a company yet. Contact your administrator.' };
     }
 
     try {
@@ -136,19 +120,30 @@ export function useFarmers() {
         throw insertError;
       }
 
+      await logAudit({
+        action: 'CREATE',
+        entity_type: 'farmer',
+        entity_id: data.id,
+        new_values: { ...data } as Record<string, unknown>,
+      });
+
       setFarmers(prev => [data, ...prev]);
       return { success: true, farmer: data };
     } catch (err) {
       console.error('Error adding farmer:', err);
-      return { success: false, error: 'Failed to add farmer' };
+      const message = err instanceof Error ? err.message : 'Failed to add farmer';
+      return {
+        success: false,
+        error: /row-level security|permission/i.test(message)
+          ? 'You are not authorised to register farmers for this company.'
+          : message,
+      };
     }
   };
 
   const updateFarmer = async (id: string, updates: Partial<FarmerFormData>): Promise<{ success: boolean; error?: string }> => {
     if (!companyId) {
-      // Demo mode
-      setFarmers(prev => prev.map(f => f.id === id ? { ...f, ...updates, updated_at: new Date().toISOString() } : f));
-      return { success: true };
+      return { success: false, error: 'Your account is not linked to a company yet.' };
     }
 
     try {
@@ -177,8 +172,7 @@ export function useFarmers() {
     }
 
     if (!companyId) {
-      setFarmers(prev => prev.map(f => f.id === id ? { ...f, is_active: !f.is_active } : f));
-      return { success: true };
+      return { success: false, error: 'Your account is not linked to a company yet.' };
     }
 
     try {
@@ -229,64 +223,3 @@ export function useFarmers() {
   };
 }
 
-// Demo data for when not connected to database
-function getDemoFarmers(): Farmer[] {
-  return [
-    {
-      id: 'demo-1',
-      farmer_code: 'FRM-001234',
-      full_name: 'Peter Nyambi',
-      national_id: '12-345678-X-12',
-      contract_number: 'CON-2024-0001',
-      phone: '+263 77 123 4567',
-      email: null,
-      farm_location: 'Mashonaland East, Zimbabwe',
-      is_active: true,
-      company_id: 'demo',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'demo-2',
-      farmer_code: 'FRM-001235',
-      full_name: 'Sarah Tembo',
-      national_id: '12-345679-X-12',
-      contract_number: 'CON-2024-0002',
-      phone: '+263 77 234 5678',
-      email: null,
-      farm_location: 'Manicaland, Zimbabwe',
-      is_active: true,
-      company_id: 'demo',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'demo-3',
-      farmer_code: 'FRM-001236',
-      full_name: 'John Phiri',
-      national_id: '12-345680-X-12',
-      contract_number: 'CON-2024-0003',
-      phone: '+263 77 345 6789',
-      email: null,
-      farm_location: 'Mashonaland Central, Zimbabwe',
-      is_active: true,
-      company_id: 'demo',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'demo-4',
-      farmer_code: 'FRM-001237',
-      full_name: 'Grace Mwanza',
-      national_id: '12-345681-X-12',
-      contract_number: 'CON-2024-0004',
-      phone: '+263 77 456 7890',
-      email: null,
-      farm_location: 'Mashonaland West, Zimbabwe',
-      is_active: false,
-      company_id: 'demo',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
-}
