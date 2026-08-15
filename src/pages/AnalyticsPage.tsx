@@ -51,7 +51,7 @@ export default function AnalyticsPage() {
 
   const fetchAnalytics = async () => {
     if (!companyId) {
-      loadDemoData();
+      clearAnalytics();
       return;
     }
     setIsLoading(true);
@@ -138,40 +138,19 @@ export default function AnalyticsPage() {
 
     } catch (error) {
       console.error('Analytics error:', error);
-      toast.error('Failed to load analytics');
-      loadDemoData();
+      toast.error(error instanceof Error ? error.message : 'Failed to load analytics');
+      clearAnalytics();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadDemoData = () => {
-    const days = parseInt(period);
-    setGradingVolume(Array.from({ length: days }, (_, i) => ({
-      date: format(subDays(new Date(), days - 1 - i), 'MMM dd'),
-      count: Math.floor(Math.random() * 80) + 30,
-    })));
-    setGradeDistribution([
-      { name: 'Premium', value: 24, color: 'hsl(var(--success))' },
-      { name: 'Good', value: 35, color: 'hsl(var(--primary))' },
-      { name: 'Standard', value: 28, color: 'hsl(var(--warning))' },
-      { name: 'Low', value: 10, color: 'hsl(var(--destructive))' },
-      { name: 'Rejected', value: 3, color: 'hsl(var(--muted))' },
-    ]);
-    setMoistureTrends(Array.from({ length: days }, (_, i) => ({
-      date: format(subDays(new Date(), days - 1 - i), 'MMM dd'),
-      avg: 13 + Math.random() * 3,
-      min: 10 + Math.random() * 2,
-      max: 16 + Math.random() * 3,
-    })));
-    setFarmerDeliveries([
-      { name: 'Peter Nyambi', count: 24, totalKg: 950 },
-      { name: 'Sarah Tembo', count: 18, totalKg: 720 },
-      { name: 'John Phiri', count: 15, totalKg: 620 },
-      { name: 'Grace Mwanza', count: 12, totalKg: 480 },
-      { name: 'David Lungu', count: 10, totalKg: 410 },
-    ]);
-    setKpis({ totalGradings: 505, avgMoisture: 14.2, manualRate: 8, disputeRate: 2 });
+  const clearAnalytics = () => {
+    setGradingVolume([]);
+    setGradeDistribution([]);
+    setMoistureTrends([]);
+    setFarmerDeliveries([]);
+    setKpis({ totalGradings: 0, avgMoisture: 0, manualRate: 0, disputeRate: 0 });
     setIsLoading(false);
   };
 
