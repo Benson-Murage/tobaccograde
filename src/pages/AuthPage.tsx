@@ -284,15 +284,6 @@ export default function AuthPage() {
             </Button>
           </form>
 
-          {/* Demo Access */}
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Want to explore first?{' '}
-              <Link to="/" className="text-primary hover:underline font-medium">
-                View Demo Dashboard
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>

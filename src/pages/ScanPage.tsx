@@ -41,13 +41,6 @@ export default function ScanPage() {
 
   const lookupCode = async (code: string): Promise<ScanResult> => {
     if (!companyId) {
-      // Demo mode fallback
-      if (code.startsWith("BL-")) {
-        return { type: "bale", code, data: { name: "Demo Farmer", status: "pending" } };
-      }
-      if (code.startsWith("FRM-")) {
-        return { type: "farmer", code, data: { name: "Demo Farmer" } };
-      }
       return { type: "unknown", code };
     }
 

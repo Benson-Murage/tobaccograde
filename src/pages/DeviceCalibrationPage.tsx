@@ -53,7 +53,7 @@ export default function DeviceCalibrationPage() {
 
   const fetchDevices = async () => {
     if (!companyId) {
-      setDevices(getDemoDevices());
+      setDevices([]);
       setIsLoading(false);
       return;
     }
@@ -90,10 +90,11 @@ export default function DeviceCalibrationPage() {
           notes: null,
         };
       });
-      setDevices(transformed.length > 0 ? transformed : getDemoDevices());
+      setDevices(transformed);
     } catch (error) {
       console.error('Device fetch error:', error);
-      setDevices(getDemoDevices());
+      toast.error(error instanceof Error ? error.message : 'Failed to load devices');
+      setDevices([]);
     } finally {
       setIsLoading(false);
     }
@@ -312,13 +313,4 @@ export default function DeviceCalibrationPage() {
       </div>
     </AppLayout>
   );
-}
-
-function getDemoDevices(): DeviceCalibration[] {
-  return [
-    { id: '1', deviceId: 'SCL-001', deviceName: 'Platform Scale A', deviceType: 'scale', lastCalibrated: new Date(Date.now() - 30 * 86400000).toISOString(), calibrationInterval: 90, certificateRef: 'CAL-2026-0031', status: 'current', daysUntilDue: 60, notes: null },
-    { id: '2', deviceId: 'SCL-002', deviceName: 'Platform Scale B', deviceType: 'scale', lastCalibrated: new Date(Date.now() - 80 * 86400000).toISOString(), calibrationInterval: 90, certificateRef: 'CAL-2025-0112', status: 'due_soon', daysUntilDue: 10, notes: null },
-    { id: '3', deviceId: 'MST-001', deviceName: 'Moisture Meter Alpha', deviceType: 'moisture', lastCalibrated: new Date(Date.now() - 100 * 86400000).toISOString(), calibrationInterval: 90, certificateRef: 'CAL-2025-0098', status: 'overdue', daysUntilDue: -10, notes: null },
-    { id: '4', deviceId: 'MST-002', deviceName: 'Moisture Meter Beta', deviceType: 'moisture', lastCalibrated: null, calibrationInterval: 90, certificateRef: null, status: 'unknown', daysUntilDue: null, notes: null },
-  ];
 }

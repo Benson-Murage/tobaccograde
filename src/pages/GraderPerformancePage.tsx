@@ -49,7 +49,7 @@ export default function GraderPerformancePage() {
 
   const fetchGraderPerformance = async () => {
     if (!companyId) {
-      setGraders(getDemoGraders());
+      setGraders([]);
       setIsLoading(false);
       return;
     }
@@ -85,10 +85,10 @@ export default function GraderPerformancePage() {
         gradeDistribution: (g.grade_distribution as Record<string, number>) || {},
       }));
 
-      setGraders(transformed.length > 0 ? transformed : getDemoGraders());
+      setGraders(transformed);
     } catch (error) {
       console.error('Grader analytics error:', error);
-      setGraders(getDemoGraders());
+      setGraders([]);
     } finally {
       setIsLoading(false);
     }
@@ -282,13 +282,4 @@ export default function GraderPerformancePage() {
       </div>
     </AppLayout>
   );
-}
-
-function getDemoGraders(): GraderProfile[] {
-  return [
-    { id: '1', name: 'James Mwale', totalGradings: 312, aiAcceptRate: 78, aiModifyRate: 15, aiRejectRate: 7, consistencyScore: 92, harshnessScore: 55, riskScore: 12, requiresReview: false, deviationTrend: 'stable', gradeDistribution: { premium: 25, good: 40, standard: 25, low: 8, rejected: 2 } },
-    { id: '2', name: 'Mary Banda', totalGradings: 287, aiAcceptRate: 62, aiModifyRate: 28, aiRejectRate: 10, consistencyScore: 78, harshnessScore: 72, riskScore: 35, requiresReview: true, deviationTrend: 'up', gradeDistribution: { premium: 15, good: 30, standard: 35, low: 15, rejected: 5 } },
-    { id: '3', name: 'Robert Chirwa', totalGradings: 156, aiAcceptRate: 85, aiModifyRate: 10, aiRejectRate: 5, consistencyScore: 95, harshnessScore: 48, riskScore: 8, requiresReview: false, deviationTrend: 'down', gradeDistribution: { premium: 30, good: 35, standard: 25, low: 8, rejected: 2 } },
-    { id: '4', name: 'Agnes Phiri', totalGradings: 98, aiAcceptRate: 55, aiModifyRate: 30, aiRejectRate: 15, consistencyScore: 65, harshnessScore: 28, riskScore: 55, requiresReview: true, deviationTrend: 'up', gradeDistribution: { premium: 40, good: 35, standard: 15, low: 8, rejected: 2 } },
-  ];
 }
