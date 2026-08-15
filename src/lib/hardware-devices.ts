@@ -106,31 +106,99 @@ export function isBluetoothSupported(): boolean {
   return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
 }
 
-// Mock scale UUIDs (replace with actual device UUIDs)
+// Bluetooth SIG standard Weight Scale service/characteristic
 const SCALE_SERVICE_UUID = '0000181d-0000-1000-8000-00805f9b34fb'; // Weight Scale Service
 const SCALE_CHARACTERISTIC_UUID = '00002a9d-0000-1000-8000-00805f9b34fb'; // Weight Measurement
 
-// Mock moisture meter UUIDs
+// Moisture meters are not covered by a standard SIG profile.
+// These are the environmental-sensing UUIDs used by the supported meters.
 const MOISTURE_SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'; 
 const MOISTURE_CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb';
 
 // Web Bluetooth API type helpers (simplified for cross-browser compatibility)
+interface BleCharacteristic {
+  readValue: () => Promise<DataView>;
+}
+interface BleServer {
+  connected?: boolean;
+  disconnect?: () => void;
+  getPrimaryService: (uuid: string) => Promise<{
+    getCharacteristic: (uuid: string) => Promise<BleCharacteristic>;
+  }>;
+}
+interface BleDevice {
+  id: string;
+  name: string | null;
+  gatt: { connect: () => Promise<BleServer> };
+}
 interface WebBluetoothNavigator extends Navigator {
   bluetooth: {
-    requestDevice: (options: unknown) => Promise<{
-      id: string;
-      name: string | null;
-      gatt: {
-        connect: () => Promise<{
-          getPrimaryService: (uuid: string) => Promise<{
-            getCharacteristic: (uuid: string) => Promise<{
-              readValue: () => Promise<DataView>;
-            }>;
-          }>;
-        }>;
-      };
-    }>;
+    requestDevice: (options: unknown) => Promise<BleDevice>;
   };
+}
+
+/**
+ * Live GATT connections, keyed by device id. Readings are only ever taken from
+ * a live connection - the app never synthesises a measurement.
+ */
+const gattConnections = new Map<string, BleServer>();
+
+export class HardwareError extends Error {
+  reason: ManualEntryReason;
+  constructor(message: string, reason: ManualEntryReason) {
+    super(message);
+    this.name = 'HardwareError';
+    this.reason = reason;
+  }
+}
+
+/** Maps a Web Bluetooth failure to the manual-entry reason the grader must record. */
+export function classifyBluetoothError(error: unknown): ManualEntryReason {
+  if (!isBluetoothSupported()) return 'device_unavailable';
+  const name = (error as { name?: string })?.name ?? '';
+  const message = String((error as { message?: string })?.message ?? error ?? '');
+  if (name === 'NotFoundError' || /cancel|no devices/i.test(message)) return 'device_unavailable';
+  if (name === 'SecurityError' || /permission|denied/i.test(message)) return 'bluetooth_failure';
+  if (name === 'NetworkError' || /disconnect|gatt/i.test(message)) return 'bluetooth_failure';
+  if (/timeout/i.test(message)) return 'network_timeout';
+  return 'bluetooth_failure';
+}
+
+/** True when the device still has a live GATT link. */
+export function isDeviceConnected(deviceId: string): boolean {
+  const server = gattConnections.get(deviceId);
+  return !!server && server.connected !== false;
+}
+
+export function disconnectDevice(deviceId: string): void {
+  const server = gattConnections.get(deviceId);
+  try {
+    server?.disconnect?.();
+  } catch {
+    // already gone
+  }
+  gattConnections.delete(deviceId);
+}
+
+async function readCharacteristic(
+  deviceId: string,
+  serviceUuid: string,
+  characteristicUuid: string,
+  timeoutMs = 8000,
+): Promise<DataView> {
+  const server = gattConnections.get(deviceId);
+  if (!server || server.connected === false) {
+    throw new HardwareError('Device is not connected', 'bluetooth_failure');
+  }
+  const read = (async () => {
+    const service = await server.getPrimaryService(serviceUuid);
+    const characteristic = await service.getCharacteristic(characteristicUuid);
+    return characteristic.readValue();
+  })();
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new HardwareError('Device did not respond in time', 'network_timeout')), timeoutMs),
+  );
+  return Promise.race([read, timeout]);
 }
 
 // Connect to Bluetooth scale
@@ -153,7 +221,8 @@ export async function connectBluetoothScale(): Promise<ScaleDevice | null> {
     });
 
     const server = await device.gatt.connect();
-    
+    gattConnections.set(device.id, server);
+
     // Get battery level if available
     let batteryLevel: number | undefined;
     try {
@@ -200,6 +269,7 @@ export async function connectBluetoothMoistureMeter(): Promise<MoistureMeterDevi
     });
 
     const server = await device.gatt.connect();
+    gattConnections.set(device.id, server);
 
     // Get battery level if available
     let batteryLevel: number | undefined;
@@ -227,30 +297,38 @@ export async function connectBluetoothMoistureMeter(): Promise<MoistureMeterDevi
   }
 }
 
-// Read weight from connected scale
+// Read weight from the connected scale.
+// Returns null when no genuine hardware reading can be obtained - callers must
+// then fall back to audited Emergency Manual Mode. Never fabricates a value.
 export async function readScaleWeight(device: ScaleDevice): Promise<number | null> {
-  // In production, this would read from the Bluetooth characteristic
-  // For demo, return simulated stable reading
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Simulate scale reading between 30-60 kg
-      const weight = 30 + Math.random() * 30;
-      resolve(Math.round(weight * 10) / 10);
-    }, 500);
-  });
+  try {
+    const value = await readCharacteristic(device.id, SCALE_SERVICE_UUID, SCALE_CHARACTERISTIC_UUID);
+    // Bluetooth SIG Weight Measurement (0x2A9D): flags byte, then uint16 weight.
+    const flags = value.getUint8(0);
+    const raw = value.getUint16(1, true);
+    const imperial = (flags & 0x01) === 1;
+    const kg = imperial ? raw * 0.01 * 0.45359237 : raw * 0.005;
+    if (!Number.isFinite(kg) || kg <= 0) return null;
+    return Math.round(kg * 10) / 10;
+  } catch (error) {
+    console.error('Scale read failed:', error);
+    return null;
+  }
 }
 
-// Read moisture from connected meter
+// Read moisture from the connected meter.
+// Returns null when no genuine hardware reading can be obtained.
 export async function readMoistureLevel(device: MoistureMeterDevice): Promise<number | null> {
-  // In production, this would read from the Bluetooth characteristic
-  // For demo, return simulated reading
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Simulate moisture reading between 10-18%
-      const moisture = 10 + Math.random() * 8;
-      resolve(Math.round(moisture * 10) / 10);
-    }, 500);
-  });
+  try {
+    const value = await readCharacteristic(device.id, MOISTURE_SERVICE_UUID, MOISTURE_CHARACTERISTIC_UUID);
+    // Humidity characteristic (0x2A6F): uint16, hundredths of a percent.
+    const percent = value.byteLength >= 2 ? value.getUint16(0, true) / 100 : value.getUint8(0);
+    if (!Number.isFinite(percent) || percent <= 0 || percent > 100) return null;
+    return Math.round(percent * 10) / 10;
+  } catch (error) {
+    console.error('Moisture read failed:', error);
+    return null;
+  }
 }
 
 // Calculate audit risk score for a grading session
