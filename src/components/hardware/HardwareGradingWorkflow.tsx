@@ -6,6 +6,10 @@
  */
 
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/lib/auth';
+import { QRScanner } from '@/components/qr/QRScanner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +51,10 @@ import {
   readScaleWeight,
   readMoistureLevel,
   calculateManualEntryRiskScore,
+  classifyBluetoothError,
+  isBluetoothSupported,
+  isDeviceConnected,
+  MANUAL_ENTRY_REASONS,
 } from '@/lib/hardware-devices';
 
 interface BaleInfo {
@@ -77,6 +85,11 @@ interface HardwareGradingWorkflowProps {
 }
 
 export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradingWorkflowProps) {
+  const { companyId } = useAuth();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [suggestedManualReason, setSuggestedManualReason] = useState<ManualEntryReason | null>(null);
+
   // Device state
   const [scale, setScale] = useState<ScaleDevice | null>(null);
   const [moistureMeter, setMoistureMeter] = useState<MoistureMeterDevice | null>(null);
@@ -141,16 +154,44 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
 
   // Device connection handlers
   const handleConnectScale = async () => {
-    const device = await connectBluetoothScale();
-    if (device) {
+    if (!isBluetoothSupported()) {
+      setSuggestedManualReason('device_unavailable');
+      setIsEmergencyMode(true);
+      toast.error('This browser does not support Bluetooth. Switched to Emergency Manual Mode.');
+      return;
+    }
+    try {
+      const device = await connectBluetoothScale();
+      if (!device) throw new Error('No scale connected');
       setScale(device);
+      setSuggestedManualReason(null);
+      toast.success(`Scale connected: ${device.name}`);
+    } catch (error) {
+      const reason = classifyBluetoothError(error);
+      setSuggestedManualReason(reason);
+      setIsEmergencyMode(true);
+      toast.error(`Scale unavailable (${MANUAL_ENTRY_REASONS[reason].label}). Emergency Manual Mode enabled.`);
     }
   };
 
   const handleConnectMoistureMeter = async () => {
-    const device = await connectBluetoothMoistureMeter();
-    if (device) {
+    if (!isBluetoothSupported()) {
+      setSuggestedManualReason('device_unavailable');
+      setIsEmergencyMode(true);
+      toast.error('This browser does not support Bluetooth. Switched to Emergency Manual Mode.');
+      return;
+    }
+    try {
+      const device = await connectBluetoothMoistureMeter();
+      if (!device) throw new Error('No moisture meter connected');
       setMoistureMeter(device);
+      setSuggestedManualReason(null);
+      toast.success(`Moisture meter connected: ${device.name}`);
+    } catch (error) {
+      const reason = classifyBluetoothError(error);
+      setSuggestedManualReason(reason);
+      setIsEmergencyMode(true);
+      toast.error(`Moisture meter unavailable (${MANUAL_ENTRY_REASONS[reason].label}). Emergency Manual Mode enabled.`);
     }
   };
 
@@ -170,6 +211,12 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
           batteryLevel: scale.batteryLevel,
         });
         setScale(prev => prev ? { ...prev, lastReading: weight } : null);
+        toast.success(`Weight captured from ${scale.name}: ${weight} kg`);
+      } else {
+        const reason: ManualEntryReason = isDeviceConnected(scale.id) ? 'calibration_issue' : 'bluetooth_failure';
+        setSuggestedManualReason(reason);
+        setIsEmergencyMode(true);
+        toast.error('No valid weight received from the scale. Use Emergency Manual Mode and record a reason.');
       }
     } finally {
       setIsReadingScale(false);
@@ -191,6 +238,12 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
           batteryLevel: moistureMeter.batteryLevel,
         });
         setMoistureMeter(prev => prev ? { ...prev, lastReading: moisture } : null);
+        toast.success(`Moisture captured from ${moistureMeter.name}: ${moisture}%`);
+      } else {
+        const reason: ManualEntryReason = isDeviceConnected(moistureMeter.id) ? 'calibration_issue' : 'bluetooth_failure';
+        setSuggestedManualReason(reason);
+        setIsEmergencyMode(true);
+        toast.error('No valid moisture reading received. Use Emergency Manual Mode and record a reason.');
       }
     } finally {
       setIsReadingMoisture(false);
@@ -199,6 +252,10 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
 
   // Manual entry handlers
   const handleManualWeight = (value: number, reason: ManualEntryReason) => {
+    if (weightReading?.source === 'hardware') {
+      toast.error('A hardware weight reading exists and cannot be overwritten manually.');
+      return;
+    }
     setWeightReading({
       value,
       source: 'manual',
@@ -208,6 +265,10 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
   };
 
   const handleManualMoisture = (value: number, reason: ManualEntryReason) => {
+    if (moistureReading?.source === 'hardware') {
+      toast.error('A hardware moisture reading exists and cannot be overwritten manually.');
+      return;
+    }
     setMoistureReading({
       value,
       source: 'manual',
@@ -224,16 +285,48 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
   // Check if supervisor approval is required
   const requiresSupervisorApproval = riskScore.level === 'high' || riskScore.level === 'critical';
 
-  // Mock QR scan (replace with actual scanner integration)
-  const handleMockScan = () => {
-    setScannedBale({
-      id: 'bale-001',
-      code: 'BL-2024-00848',
-      farmerName: 'Peter Nyambi',
-      farmerId: 'FRM-001234',
-      warehouseId: 'warehouse-001',
-    });
-  };
+  // Real QR scan: resolve the scanned code against the bale register
+  const handleScannedCode = useCallback(async (code: string) => {
+    const baleCode = code.trim();
+    setIsScannerOpen(false);
+    if (!baleCode) return;
+
+    if (!companyId) {
+      toast.error('Your account is not linked to a company yet. Contact your administrator.');
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      const { data, error } = await supabase
+        .from('bales')
+        .select('id, bale_code, warehouse_id, status, farmers ( full_name, farmer_code )')
+        .eq('company_id', companyId)
+        .eq('bale_code', baleCode)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        toast.error(`No bale found with code ${baleCode}. Register the bale first.`);
+        return;
+      }
+
+      const farmer = data.farmers as { full_name?: string; farmer_code?: string } | null;
+      setScannedBale({
+        id: data.id,
+        code: data.bale_code,
+        farmerName: farmer?.full_name ?? 'Unknown farmer',
+        farmerId: farmer?.farmer_code ?? '-',
+        warehouseId: data.warehouse_id ?? undefined,
+      });
+      toast.success(`Bale ${data.bale_code} loaded`);
+    } catch (error) {
+      console.error('Bale lookup failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to look up bale');
+    } finally {
+      setIsLookingUp(false);
+    }
+  }, [companyId]);
 
   const StepIcon = ({ icon, status }: { icon: WorkflowStep['icon']; status: WorkflowStep['status'] }) => {
     const iconClass = cn(
@@ -348,10 +441,19 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
             <p className="text-sm text-muted-foreground mb-4">
               Scan the bale's QR code to begin the grading process
             </p>
-            <Button variant="enterprise" onClick={handleMockScan}>
-              <QrCode className="h-4 w-4 mr-2" />
-              Scan Bale QR
-            </Button>
+            {isScannerOpen ? (
+              <div className="space-y-3">
+                <QRScanner onScan={handleScannedCode} onClose={() => setIsScannerOpen(false)} />
+                <Button variant="outline" onClick={() => setIsScannerOpen(false)}>
+                  Cancel Scan
+                </Button>
+              </div>
+            ) : (
+              <Button variant="enterprise" onClick={() => setIsScannerOpen(true)} disabled={isLookingUp}>
+                <QrCode className="h-4 w-4 mr-2" />
+                {isLookingUp ? 'Looking up bale...' : 'Scan Bale QR'}
+              </Button>
+            )}
           </div>
         </div>
       )}
