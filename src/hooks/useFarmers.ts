@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logAudit } from '@/lib/audit-logger';
 
 export interface Farmer {
   id: string;
@@ -119,11 +120,24 @@ export function useFarmers() {
         throw insertError;
       }
 
+      await logAudit({
+        action: 'CREATE',
+        entity_type: 'farmer',
+        entity_id: data.id,
+        new_values: { ...data } as Record<string, unknown>,
+      });
+
       setFarmers(prev => [data, ...prev]);
       return { success: true, farmer: data };
     } catch (err) {
       console.error('Error adding farmer:', err);
-      return { success: false, error: 'Failed to add farmer' };
+      const message = err instanceof Error ? err.message : 'Failed to add farmer';
+      return {
+        success: false,
+        error: /row-level security|permission/i.test(message)
+          ? 'You are not authorised to register farmers for this company.'
+          : message,
+      };
     }
   };
 
