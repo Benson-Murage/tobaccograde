@@ -325,6 +325,7 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
       gradingId,
       isOffline: false,
       requiresApproval: submission.requiresSupervisorApproval,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
     
   } catch (error) {
