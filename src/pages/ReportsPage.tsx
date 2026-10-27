@@ -42,6 +42,12 @@ export default function ReportsPage() {
   const { companyId } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
 
+  // Proper RFC-4180 field escaping: quotes, commas, and newlines inside values
+  const csvField = (value: unknown): string => {
+    const s = value === null || value === undefined ? '' : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
   const buildCsvContent = async (type: string): Promise<string> => {
     if (type === 'grading_summary' || type === 'grade_distribution') {
       const query = supabase
@@ -53,7 +59,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Bale Code,Farmer,Grade,Grade Class,Moisture %,Defect %,Weight (kg),Graded At\n';
       (data || []).forEach((g: any) => {
-        csv += `${g.bales?.bale_code || ''},${g.bales?.farmers?.full_name || ''},${g.grade_code},${g.grade_class || ''},${g.moisture_percent || ''},${g.defect_percent || ''},${g.bales?.weight_kg || ''},${g.graded_at}\n`;
+        csv += [g.bales?.bale_code, g.bales?.farmers?.full_name, g.grade_code, g.grade_class, g.moisture_percent, g.defect_percent, g.bales?.weight_kg, g.graded_at]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'farmer_payment') {
@@ -66,7 +73,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Farmer,Farmer Code,Bale Code,Weight (kg),Status\n';
       (data || []).forEach((b: any) => {
-        csv += `${b.farmers?.full_name || ''},${b.farmers?.farmer_code || ''},${b.bale_code},${b.weight_kg},${b.status}\n`;
+        csv += [b.farmers?.full_name, b.farmers?.farmer_code, b.bale_code, b.weight_kg, b.status]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'dispute_log') {
@@ -79,7 +87,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'ID,Status,Priority,Reason,Resolution,New Grade,Raised At\n';
       (data || []).forEach((d: any) => {
-        csv += `${d.id},${d.status},${d.priority || ''},${(d.reason || '').replace(/,/g, ';')},${(d.resolution_notes || '').replace(/,/g, ';')},${d.new_grade_code || ''},${d.raised_at}\n`;
+        csv += [d.id, d.status, d.priority, d.reason, d.resolution_notes, d.new_grade_code, d.raised_at]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'grader_performance') {
@@ -92,7 +101,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Grader ID,Total Gradings,Consistency,AI Accept %,AI Modify %,AI Reject %,Risk Score,Harshness,Period Start,Period End\n';
       (data || []).forEach((g: any) => {
-        csv += `${g.grader_id},${g.total_gradings},${g.consistency_score || ''},${g.ai_accept_rate || ''},${g.ai_modify_rate || ''},${g.ai_reject_rate || ''},${g.risk_score || ''},${g.harshness_score || ''},${g.period_start},${g.period_end}\n`;
+        csv += [g.grader_id, g.total_gradings, g.consistency_score, g.ai_accept_rate, g.ai_modify_rate, g.ai_reject_rate, g.risk_score, g.harshness_score, g.period_start, g.period_end]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'seasonal_summary') {
@@ -105,7 +115,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Bale Code,Farmer,Warehouse,Weight (kg),Status,Registered At\n';
       (data || []).forEach((b: any) => {
-        csv += `${b.bale_code},${b.farmers?.full_name || ''},${b.warehouses?.name || ''},${b.weight_kg},${b.status},${b.registered_at}\n`;
+        csv += [b.bale_code, b.farmers?.full_name, b.warehouses?.name, b.weight_kg, b.status, b.registered_at]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     }
