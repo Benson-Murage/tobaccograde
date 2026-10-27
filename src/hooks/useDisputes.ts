@@ -163,6 +163,26 @@ export function useDisputes() {
     return (data || []).map((r: any) => r.user_id);
   }, [companyId]);
 
+  // When a dispute is closed (resolved or rejected) the bale returns to its graded state
+  const revertBaleToGraded = useCallback(async (gradingId: string) => {
+    const { data, error } = await supabase
+      .from('gradings')
+      .select('bale_id')
+      .eq('id', gradingId)
+      .maybeSingle();
+    if (error || !data) {
+      console.error('Could not resolve bale for dispute closure:', error);
+      return;
+    }
+    const { error: baleError } = await supabase
+      .from('bales')
+      .update({ status: 'graded' })
+      .eq('id', data.bale_id);
+    if (baleError) {
+      console.error('Failed to return disputed bale to graded state:', baleError);
+    }
+  }, []);
+
   const createDispute = async (formData: DisputeFormData): Promise<{ success: boolean; dispute?: Dispute; error?: string }> => {
     if (!user) {
       return { success: false, error: 'Not authenticated' };
@@ -291,6 +311,9 @@ export function useDisputes() {
         `Your dispute was resolved: ${resolution.notes}`,
         id
       );
+
+      const gradingId = disputes.find((d) => d.id === id)?.grading_id;
+      if (gradingId) await revertBaleToGraded(gradingId);
 
       setDisputes(prev => prev.map(d => 
         d.id === id ? {
