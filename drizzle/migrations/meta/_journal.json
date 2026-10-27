@@ -78,6 +78,13 @@
       "when": 1793118496166,
       "tag": "0010_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793120319539,
+      "tag": "0011_add_grading_update_ledger_events",
+      "breakpoints": true
     }
   ]
 }
