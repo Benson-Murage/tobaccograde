@@ -71,6 +71,12 @@ export default function HarvestPredictionPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!selectedFarmerId) {
+      toast.error('Select the farmer first', {
+        description: 'Each prediction must be linked to a grower record.'
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1];
