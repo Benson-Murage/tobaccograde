@@ -263,6 +263,8 @@ export function formatAuditAction(action: AuditAction): string {
     PRICE_UPDATE: 'Updated prices',
     RULE_UPDATE: 'Updated grading rules',
     EXPORT: 'Exported report',
+    INSPECT_PASS: 'Inspection passed',
+    INSPECT_FAIL: 'Inspection failed',
     SYNC: 'Synced data',
     DEVICE_REGISTER: 'Registered device',
     DEVICE_TRUST: 'Trusted device',
@@ -289,6 +291,7 @@ export function formatEntityType(type: EntityType): string {
     role: 'Role',
     session: 'Session',
     report: 'Report',
+    export_batch: 'Export Batch',
   };
   return labels[type] ?? type;
 }
