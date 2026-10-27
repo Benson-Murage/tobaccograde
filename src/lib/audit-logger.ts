@@ -45,7 +45,8 @@ export type EntityType =
   | 'device'
   | 'role'
   | 'session'
-  | 'report';
+  | 'report'
+  | 'export_batch';
 
 interface AuditLogEntry {
   action: AuditAction;
