@@ -254,6 +254,8 @@ export default function ReportsPage() {
     }
   }, [companyId]);
 
+  const maxBales = graderPerformance.reduce((m, g) => Math.max(m, g.bales), 0);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -262,12 +264,9 @@ export default function ReportsPage() {
             <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
             <p className="text-muted-foreground">Generate and export detailed operational reports</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline"><Calendar className="h-4 w-4 mr-2" />Date Range</Button>
-            <Button variant="enterprise" onClick={() => exportReport('grading_summary', 'csv')}>
-              <Download className="h-4 w-4 mr-2" />Export All
-            </Button>
-          </div>
+          <Button variant="enterprise" onClick={() => exportReport('grading_summary', 'csv')}>
+            <Download className="h-4 w-4 mr-2" />Export All
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
