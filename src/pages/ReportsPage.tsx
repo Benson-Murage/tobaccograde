@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,23 +11,6 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
 } from "recharts";
-
-const dailyGradingData = [
-  { date: "Jan 6", bales: 720, value: 98400 },
-  { date: "Jan 7", bales: 680, value: 89200 },
-  { date: "Jan 8", bales: 890, value: 118500 },
-  { date: "Jan 9", bales: 756, value: 102300 },
-  { date: "Jan 10", bales: 845, value: 125600 },
-  { date: "Jan 11", bales: 920, value: 134200 },
-  { date: "Jan 12", bales: 847, value: 128450 },
-];
-
-const graderPerformance = [
-  { name: "James Mwale", bales: 245, accuracy: 98.2, avgTime: 1.8 },
-  { name: "Mary Banda", bales: 198, accuracy: 97.5, avgTime: 2.1 },
-  { name: "Peter Lungu", bales: 156, accuracy: 99.1, avgTime: 1.9 },
-  { name: "Grace Tembo", bales: 134, accuracy: 96.8, avgTime: 2.3 },
-];
 
 const reports = [
   { name: "Daily Grading Summary", description: "Complete breakdown of today's grading activities", icon: BarChart3, type: "grading_summary" },
