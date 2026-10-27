@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,6 @@ import { FarmerRegistrationDialog } from "@/components/farmers/FarmerRegistratio
 import {
   Search,
   UserPlus,
-  Filter,
-  MoreVertical,
   MapPin,
   Package,
   Phone,
@@ -25,12 +24,19 @@ const statusStyles = {
   pending: "bg-warning/10 text-warning",
 };
 
+const PAGE_SIZE = 20;
+
 export default function FarmersPage() {
+  const navigate = useNavigate();
+  const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const { farmers, isLoading, stats, addFarmer, searchFarmers, refetch } = useFarmers();
 
-  const filteredFarmers = searchQuery ? searchFarmers(searchQuery) : farmers;
+  const filteredFarmers = (searchQuery ? searchFarmers(searchQuery) : farmers)
+    .slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalFarmers = searchQuery ? searchFarmers(searchQuery).length : farmers.length;
+  const totalPages = Math.max(1, Math.ceil(totalFarmers / PAGE_SIZE));
 
   return (
     <AppLayout>
@@ -62,14 +68,10 @@ export default function FarmersPage() {
               <Input
                 placeholder="Search by name, ID, or contract number..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                 className="pl-12 h-11"
               />
             </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
           </div>
         </div>
 
@@ -172,10 +174,15 @@ export default function FarmersPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="shrink-0">
-                      <MoreVertical className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      aria-label={`Open ${farmer.full_name}`}
+                      onClick={() => navigate(`/farmers/${farmer.id}`)}
+                    >
+                      <ChevronRight className="h-5 w-5" />
                     </Button>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
               </div>
@@ -184,16 +191,17 @@ export default function FarmersPage() {
         )}
 
         {/* Pagination */}
-        {filteredFarmers.length > 0 && (
+        {totalFarmers > PAGE_SIZE && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredFarmers.length} of {farmers.length} farmers
+              Showing {filteredFarmers.length} of {totalFarmers} farmers
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>
+              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>
                 Previous
               </Button>
-              <Button variant="outline" size="sm">
+              <span className="text-sm text-muted-foreground self-center">Page {page + 1} of {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>
                 Next
               </Button>
             </div>
