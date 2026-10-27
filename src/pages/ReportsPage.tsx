@@ -24,6 +24,86 @@ const reports = [
 export default function ReportsPage() {
   const { companyId } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
+  const [dailyGradingData, setDailyGradingData] = useState<{ date: string; bales: number; value: number }[]>([]);
+  const [graderPerformance, setGraderPerformance] = useState<{ name: string; bales: number; accuracy: number | null; avgTime: number | null }[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!companyId) return;
+      setIsLoadingData(true);
+      try {
+        const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+        const query = supabase
+          .from('gradings')
+          .select('id, graded_at, grader_id, grading_prices(total_value), ai_grader_decisions(overall_decision, decision_time_seconds)')
+          .gte('graded_at', weekAgo)
+          .order('graded_at', { ascending: false })
+          .limit(2000);
+        if (companyId) query.eq('company_id', companyId);
+        const { data, error } = await query;
+        if (error) throw error;
+        const gradings = (data || []) as any[];
+
+        // Daily buckets for the last 7 days
+        const buckets = new Map<string, { bales: number; value: number }>();
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(Date.now() - i * 86400000);
+          buckets.set(d.toISOString().slice(0, 10), { bales: 0, value: 0 });
+        }
+        gradings.forEach((g) => {
+          const day = g.graded_at.slice(0, 10);
+          const bucket = buckets.get(day);
+          if (bucket) {
+            bucket.bales += 1;
+            bucket.value += Number(g.grading_prices?.[0]?.total_value || 0);
+          }
+        });
+        setDailyGradingData(
+          Array.from(buckets.entries()).map(([day, v]) => ({
+            date: new Date(day + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            ...v,
+          }))
+        );
+
+        // Per-grader metrics for the same window
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('company_id', companyId);
+        const nameById = new Map((profileRows || []).map((p: any) => [p.id, p.full_name]));
+        const byGrader = new Map<string, { bales: number; decisions: number; accepted: number; timeSum: number; timeCount: number }>();
+        gradings.forEach((g) => {
+          const entry = byGrader.get(g.grader_id) || { bales: 0, decisions: 0, accepted: 0, timeSum: 0, timeCount: 0 };
+          entry.bales += 1;
+          const dec = g.ai_grader_decisions?.[0];
+          if (dec) {
+            entry.decisions += 1;
+            if (dec.overall_decision === 'accepted') entry.accepted += 1;
+            if (dec.decision_time_seconds != null) {
+              entry.timeSum += dec.decision_time_seconds;
+              entry.timeCount += 1;
+            }
+          }
+          byGrader.set(g.grader_id, entry);
+        });
+        setGraderPerformance(
+          Array.from(byGrader.entries()).map(([id, e]) => ({
+            name: nameById.get(id) || 'Unknown grader',
+            bales: e.bales,
+            accuracy: e.decisions > 0 ? Math.round((e.accepted / e.decisions) * 1000) / 10 : null,
+            avgTime: e.timeCount > 0 ? Math.round((e.timeSum / e.timeCount) * 10) / 10 : null,
+          })).sort((a, b) => b.bales - a.bales)
+        );
+      } catch (err) {
+        console.error('Failed to load report data:', err);
+        toast.error('Failed to load report metrics');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    loadDashboardData();
+  }, [companyId]);
 
   // Proper RFC-4180 field escaping: quotes, commas, and newlines inside values
   const csvField = (value: unknown): string => {
