@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/lib/auth';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -156,6 +157,17 @@ export default function HarvestPredictionPage() {
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5" />Field Image</CardTitle></CardHeader>
                 <CardContent>
+                  <label className="block text-sm font-medium text-foreground mb-1">Farmer <span className="text-destructive">*</span></label>
+                  <select
+                    className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm text-foreground mb-4"
+                    value={selectedFarmerId}
+                    onChange={(e) => setSelectedFarmerId(e.target.value)}
+                  >
+                    <option value="">Select farmer…</option>
+                    {(farmers || []).map((f: any) => (
+                      <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
+                    ))}
+                  </select>
                   {selectedImage ? (
                     <div className="relative">
                       <img src={selectedImage} alt="Field" className="w-full rounded-lg border border-border" />
