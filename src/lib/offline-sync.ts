@@ -130,7 +130,17 @@ async function syncGrading(payload: {
   grading: Record<string, unknown>;
   aiDecision: Record<string, unknown> | null;
   price: Record<string, unknown> | null;
-  submission: { baleId: string };
+  submission: {
+    baleId: string;
+    aiPrediction?: {
+      suggestedGrade: string;
+      suggestedGradeClass?: string;
+      overallConfidence?: number;
+      processingTimeMs?: number;
+      modelId?: string | null;
+      raw: Record<string, unknown>;
+    };
+  };
 }): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -164,7 +174,49 @@ async function syncGrading(payload: {
     return false;
   }
 
-  if (payload.aiDecision) {
+  // Persist the AI prediction first so the decision links to a real record
+  if (payload.submission?.aiPrediction && payload.aiDecision) {
+    const p = payload.submission.aiPrediction.raw as any;
+    const predictionRecord: Record<string, unknown> = {
+      company_id: payload.grading.company_id,
+      grading_id: String(payload.grading.id),
+      ai_model_id: null,
+      suggested_grade: payload.submission.aiPrediction.suggestedGrade,
+      suggested_grade_class: payload.submission.aiPrediction.suggestedGradeClass || null,
+      overall_confidence: payload.submission.aiPrediction.overallConfidence ?? null,
+      processing_time_ms: payload.submission.aiPrediction.processingTimeMs ?? null,
+      explanation: p.overall_explanation ?? null,
+      key_factors: p.key_factors ?? [],
+      raw_response: {
+        model_used: payload.submission.aiPrediction.modelId || null,
+        analysis: p,
+      },
+      suggested_color: p.color?.value ?? null,
+      suggested_color_confidence: p.color?.confidence ?? null,
+      suggested_leaf_position: p.leaf_position?.value ?? null,
+      suggested_leaf_position_confidence: p.leaf_position?.confidence ?? null,
+      suggested_texture: p.texture?.value ?? null,
+      suggested_texture_confidence: p.texture?.confidence ?? null,
+      suggested_maturity: p.maturity?.value ?? null,
+      suggested_maturity_confidence: p.maturity?.confidence ?? null,
+      defect_percentage: p.defects?.total_percentage ?? null,
+      defect_confidence: p.defects?.confidence ?? null,
+      detected_defects: p.defects?.detected_issues ?? [],
+      uniformity_score: p.uniformity?.score ?? null,
+    };
+    const { data: predictionRow, error: predictionError } = await supabase
+      .from('ai_predictions')
+      .insert([predictionRecord] as never)
+      .select('id')
+      .single();
+    if (predictionError || !predictionRow) {
+      console.error('AI prediction sync error:', predictionError);
+    } else {
+      payload.aiDecision.ai_prediction_id = predictionRow.id;
+    }
+  }
+
+  if (payload.aiDecision && payload.aiDecision.ai_prediction_id) {
     const { error: aiError } = await supabase.from('ai_grader_decisions').insert([{
       ...payload.aiDecision,
       grader_id: user.id,

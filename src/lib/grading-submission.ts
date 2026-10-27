@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { getDeviceId, getDeviceFingerprint, queueForSync, isOnline } from './offline-sync';
 import { logAudit, auditGrade } from './audit-logger';
 import type { LeafPosition, TobaccoColor, TobaccoTexture, TobaccoMaturity, QualityBand } from './tobacco-grading';
@@ -50,6 +51,16 @@ export interface GradingSubmission {
   riskScore: number;
   requiresSupervisorApproval: boolean;
   notes?: string;
+
+  // Raw AI analysis persisted in ai_predictions (the record the decision links to)
+  aiPrediction?: {
+    suggestedGrade: string;
+    suggestedGradeClass?: string;
+    overallConfidence?: number;
+    processingTimeMs?: number;
+    modelId?: string | null;
+    raw: Record<string, unknown>;
+  };
 }
 
 export interface SubmissionResult {
@@ -59,6 +70,8 @@ export interface SubmissionResult {
   requiresApproval: boolean;
   syncQueueId?: string;
   error?: string;
+  /** Non-fatal persistence problems (e.g. AI records failed to save) shown to the user */
+  warnings?: string[];
 }
 
 /**
@@ -91,12 +104,14 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
     sync_status: (isOnline() ? 'synced' : 'pending') as 'synced' | 'pending',
     is_locked: false,
     graded_at: new Date().toISOString(),
+    photo_urls: submission.capturedImageUrl ? [submission.capturedImageUrl] : null,
   };
   
-  // Prepare AI decision record if AI was used
+  // Prepare AI decision record if AI was used.
+  // ai_prediction_id is filled after the ai_predictions row is inserted below.
   const aiDecisionRecord = submission.aiDecisions ? {
     company_id: submission.companyId,
-    ai_prediction_id: crypto.randomUUID(),
+    ai_prediction_id: '',
     grading_id: gradingId,
     grader_id: '', // Will be set from auth
     ai_suggested_grade: submission.aiSuggestedGrade,
@@ -200,14 +215,79 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
       };
     }
     
+    // Insert AI prediction first, then link the grader decision to it
+    const warnings: string[] = [];
+    if (submission.aiPrediction) {
+      const p = submission.aiPrediction.raw as any;
+      const predictionRecord: Record<string, unknown> = {
+        company_id: submission.companyId,
+        grading_id: gradingId,
+        // ai_model_id references the company's registered ai_models row; the runtime
+        // model identifier is kept in raw_response instead of forcing it into the UUID
+        ai_model_id: null,
+        suggested_grade: submission.aiPrediction.suggestedGrade,
+        suggested_grade_class: submission.aiPrediction.suggestedGradeClass || null,
+        overall_confidence: submission.aiPrediction.overallConfidence ?? null,
+        processing_time_ms: submission.aiPrediction.processingTimeMs ?? null,
+        explanation: p.overall_explanation ?? null,
+        key_factors: p.key_factors ?? [],
+        raw_response: {
+          model_used: submission.aiPrediction.modelId || null,
+          analysis: p,
+        },
+      };
+      if (p.color) {
+        predictionRecord.suggested_color = p.color.value;
+        predictionRecord.suggested_color_confidence = p.color.confidence;
+      }
+      if (p.leaf_position) {
+        predictionRecord.suggested_leaf_position = p.leaf_position.value;
+        predictionRecord.suggested_leaf_position_confidence = p.leaf_position.confidence;
+      }
+      if (p.texture) {
+        predictionRecord.suggested_texture = p.texture.value;
+        predictionRecord.suggested_texture_confidence = p.texture.confidence;
+      }
+      if (p.maturity) {
+        predictionRecord.suggested_maturity = p.maturity.value;
+        predictionRecord.suggested_maturity_confidence = p.maturity.confidence;
+      }
+      if (p.defects) {
+        predictionRecord.defect_percentage = p.defects.total_percentage;
+        predictionRecord.defect_confidence = p.defects.confidence;
+        predictionRecord.detected_defects = p.defects.detected_issues ?? [];
+      }
+      if (p.uniformity) {
+        predictionRecord.uniformity_score = p.uniformity.score;
+      }
+
+      const { data: predictionRow, error: predictionError } = await supabase
+        .from('ai_predictions')
+        .insert([predictionRecord as Database['public']['Tables']['ai_predictions']['Insert']])
+        .select('id')
+        .single();
+
+      if (predictionError || !predictionRow) {
+        console.error('AI prediction insert error:', predictionError);
+        warnings.push('AI analysis details could not be saved to the audit trail.');
+      } else if (aiDecisionRecord) {
+        aiDecisionRecord.ai_prediction_id = predictionRow.id;
+      }
+    }
+
     // Insert AI decision if exists
     if (aiDecisionRecord) {
-      const { error: aiError } = await supabase
-        .from('ai_grader_decisions')
-        .insert([aiDecisionRecord]);
-      
-      if (aiError) {
-        console.error('AI decision insert error:', aiError);
+      if (!aiDecisionRecord.ai_prediction_id) {
+        warnings.push('AI suggestion record is incomplete — the grader decision was not saved.');
+      } else {
+        const { error: aiError } = await supabase
+          .from('ai_grader_decisions')
+          .insert([aiDecisionRecord]);
+
+        if (aiError) {
+          console.error('AI decision insert error:', aiError);
+          warnings.push('The AI review decision could not be saved.');
+        }
       }
     }
     
@@ -252,6 +332,7 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
       gradingId,
       isOffline: false,
       requiresApproval: submission.requiresSupervisorApproval,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
     
   } catch (error) {

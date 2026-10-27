@@ -110,7 +110,7 @@ export default function FarmVerificationPage() {
               <Satellite className="h-6 w-6 text-primary" />
               Farm Verification
             </h1>
-            <p className="text-muted-foreground">Verify farm boundaries, crop areas, and legitimacy</p>
+            <p className="text-muted-foreground">Manual farm boundary and crop-area verification workflow (no satellite imagery integration)</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>

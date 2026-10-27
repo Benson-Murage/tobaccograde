@@ -93,6 +93,10 @@ export default function GradingPage() {
   const [processingTimeMs, setProcessingTimeMs] = useState<number | undefined>();
   const [overallConfidence, setOverallConfidence] = useState<number | undefined>();
   const [aiExplanation, setAiExplanation] = useState<string | undefined>();
+  // Raw AI analysis persisted with the grading record
+  const [aiAnalysisRaw, setAiAnalysisRaw] = useState<Record<string, unknown> | null>(null);
+  // Storage path of the captured leaf image (uploaded to the private grading-images bucket)
+  const [capturedImagePath, setCapturedImagePath] = useState<string | null>(null);
 
   // Active price list — bale value must come from the configured price rule
   const [activePriceMatrix, setActivePriceMatrix] = useState<Record<string, number> | null>(null);
@@ -172,6 +176,39 @@ export default function GradingPage() {
     setCapturedImage(imageData);
     setShowCamera(false);
     setIsAnalyzing(true);
+    setCapturedImagePath(null);
+
+    // Persist the captured image first — it must survive even if AI analysis fails,
+    // so the human grader always has the evidence attached to the bale.
+    if (companyId && currentBaleData) {
+      try {
+        const blob = await (await fetch(imageData)).blob();
+        const path = `${companyId}/${currentBaleData.id}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('grading-images')
+          .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { error: imageRecordError } = await supabase
+          .from('grading_images')
+          .insert([{
+            company_id: companyId,
+            bale_id: currentBaleData.id,
+            image_url: path,
+            image_type: 'leaf',
+            capture_metadata: JSON.parse(JSON.stringify(metadata)),
+            device_id: metadata.deviceType,
+            captured_at: metadata.timestamp,
+          }]);
+        if (imageRecordError) throw imageRecordError;
+        setCapturedImagePath(path);
+      } catch (error) {
+        console.error('Image persistence error:', error);
+        toast.error("Could not save captured image", {
+          description: "The photo was not attached to this bale. Check your connection and try again."
+        });
+      }
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-tobacco-leaf', {
@@ -233,6 +270,7 @@ export default function GradingPage() {
         setProcessingTimeMs(analysis.processing_time_ms);
         setOverallConfidence(analysis.suggested_grade?.confidence);
         setAiExplanation(analysis.overall_explanation);
+        setAiAnalysisRaw(analysis);
 
         // Initialize all as pending
         const initialDecisions: Record<string, AIDecision> = {};
@@ -392,6 +430,15 @@ export default function GradingPage() {
               { decision: val.decision as 'accept' | 'modify' | 'reject', aiValue: val.aiValue, finalValue: val.finalValue }
             ])
           ) : undefined,
+        capturedImageUrl: capturedImagePath || undefined,
+        aiPrediction: aiAnalysisRaw ? {
+          suggestedGrade: gradeResult.grade,
+          suggestedGradeClass: (aiAnalysisRaw.suggested_grade as any)?.grade_class,
+          overallConfidence: overallConfidence,
+          processingTimeMs: processingTimeMs,
+          modelId: (aiAnalysisRaw.model_used as string) || null,
+          raw: aiAnalysisRaw,
+        } : undefined,
         gradeCode: gradeResult.grade,
         gradeClass: gradeResult.class,
         unitPrice: priceBreakdown?.finalPricePerKg || 0,
@@ -404,6 +451,11 @@ export default function GradingPage() {
       const result = await submitGrading(submission);
 
       if (result.success) {
+        if (result.warnings?.length) {
+          toast.warning("Grade saved with warnings", {
+            description: result.warnings.join(" ")
+          });
+        }
         if (result.isOffline) {
           toast.info("Grading saved offline", {
             description: "Will sync when connection is restored"
@@ -424,6 +476,8 @@ export default function GradingPage() {
         setHardwareWeight(null);
         setHardwareMoisture(null);
         setCapturedImage(null);
+        setCapturedImagePath(null);
+        setAiAnalysisRaw(null);
         setAiSuggestions([]);
         setAiDecisions({});
         setPosition(null);
@@ -554,6 +608,8 @@ export default function GradingPage() {
                 className="absolute top-2 right-2"
                 onClick={() => {
                   setCapturedImage(null);
+                  setCapturedImagePath(null);
+                  setAiAnalysisRaw(null);
                   setAiSuggestions([]);
                   setAiDecisions({});
                 }}

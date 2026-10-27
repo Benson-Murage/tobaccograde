@@ -102,22 +102,42 @@ export default function DiseaseDetectionPage() {
         setResult(data.analysis);
         toast.success('Disease analysis complete');
 
-        // Store results
+        // Store results — every analysis is recorded, healthy or not, so the
+        // detection history is auditable and trend data is complete
         const { data: { user } } = await supabase.auth.getUser();
-        if (user && data.analysis.diseases?.length > 0) {
-          for (const disease of data.analysis.diseases) {
-            const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
-            if (profile?.company_id) {
-              await supabase.from('disease_detections').insert({
-                company_id: profile.company_id,
-                grader_id: user.id,
-                disease_name: disease.name,
-                confidence: disease.confidence,
-                risk_level: disease.risk_level,
-                recommended_action: disease.recommended_action,
-                affected_area_percent: disease.affected_area_percent,
-                ai_raw_response: data.analysis,
-                processing_time_ms: data.analysis.processing_time_ms,
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+          if (profile?.company_id) {
+            const detections = data.analysis.diseases?.length > 0
+              ? data.analysis.diseases.map((disease: DiseaseResult) => ({
+                  company_id: profile.company_id,
+                  grader_id: user.id,
+                  disease_name: disease.name,
+                  confidence: disease.confidence,
+                  risk_level: disease.risk_level,
+                  recommended_action: disease.recommended_action,
+                  affected_area_percent: disease.affected_area_percent,
+                  ai_raw_response: data.analysis,
+                  processing_time_ms: data.analysis.processing_time_ms,
+                }))
+              : [{
+                  company_id: profile.company_id,
+                  grader_id: user.id,
+                  disease_name: 'None detected',
+                  confidence: data.analysis.overall_health?.score ?? 100,
+                  risk_level: 'none',
+                  recommended_action: data.analysis.batch_recommendation || null,
+                  affected_area_percent: 0,
+                  ai_raw_response: data.analysis,
+                  processing_time_ms: data.analysis.processing_time_ms,
+                }];
+            const { error: insertError } = await supabase
+              .from('disease_detections')
+              .insert(detections);
+            if (insertError) {
+              console.error('Disease detection insert error:', insertError);
+              toast.warning('Analysis result could not be saved', {
+                description: 'The analysis was completed but the record was not stored. Please try again.'
               });
             }
           }

@@ -265,7 +265,7 @@ export default function ReportsPage() {
             <p className="text-muted-foreground">Generate and export detailed operational reports</p>
           </div>
           <Button variant="enterprise" onClick={() => exportReport('grading_summary', 'csv')}>
-            <Download className="h-4 w-4 mr-2" />Export All
+            <Download className="h-4 w-4 mr-2" />Export Daily Summary
           </Button>
         </div>
 

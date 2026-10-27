@@ -57,6 +57,34 @@
       "when": 1793116942666,
       "tag": "0007_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793118136269,
+      "tag": "0008_traceability_ledger_hash_chain",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793118454754,
+      "tag": "0009_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793118496166,
+      "tag": "0010_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793120319539,
+      "tag": "0011_add_grading_update_ledger_events",
+      "breakpoints": true
     }
   ]
 }

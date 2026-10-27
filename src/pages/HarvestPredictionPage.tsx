@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/lib/auth';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,9 +31,30 @@ const gradeColors: Record<string, string> = {
 };
 
 export default function HarvestPredictionPage() {
+  const { companyId } = useAuth();
   const [analyzing, setAnalyzing] = useState(false);
   const [prediction, setPrediction] = useState<HarvestPrediction | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFarmerId, setSelectedFarmerId] = useState<string>('');
+
+  // Farmer whose field is being analysed — required so predictions are
+  // attributed to a real grower record instead of the signed-in user
+  const { data: farmers } = useQuery({
+    queryKey: ['harvest-farmers', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('id, full_name, farmer_code')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .order('full_name')
+        .limit(500);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
 
   const { data: predictions } = useQuery({
     queryKey: ['harvest-predictions'],
@@ -50,6 +72,12 @@ export default function HarvestPredictionPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!selectedFarmerId) {
+      toast.error('Select the farmer first', {
+        description: 'Each prediction must be linked to a grower record.'
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1];
@@ -78,14 +106,22 @@ export default function HarvestPredictionPage() {
           if (profile?.company_id) {
             await supabase.from('harvest_predictions').insert({
               company_id: profile.company_id,
-              farmer_id: user.id, // Placeholder; real flow would select farmer
+              farmer_id: selectedFarmerId,
               predicted_grade: data.prediction.predicted_grade.grade,
               predicted_grade_class: data.prediction.predicted_grade.grade_class,
               confidence: data.prediction.predicted_grade.confidence,
               predicted_yield_kg: data.prediction.yield_estimate.kg_per_hectare,
               predicted_value: data.prediction.value_estimate.total_estimate_per_hectare,
+              currency: 'USD',
               ai_analysis: data.prediction,
               processing_time_ms: data.prediction.processing_time_ms,
+            }).then(({ error: insertError }) => {
+              if (insertError) {
+                console.error('Harvest prediction insert error:', insertError);
+                toast.warning('Prediction result could not be saved', {
+                  description: 'The prediction was generated but the record was not stored. Please try again.'
+                });
+              }
             });
           }
         }
@@ -121,6 +157,17 @@ export default function HarvestPredictionPage() {
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5" />Field Image</CardTitle></CardHeader>
                 <CardContent>
+                  <label className="block text-sm font-medium text-foreground mb-1">Farmer <span className="text-destructive">*</span></label>
+                  <select
+                    className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm text-foreground mb-4"
+                    value={selectedFarmerId}
+                    onChange={(e) => setSelectedFarmerId(e.target.value)}
+                  >
+                    <option value="">Select farmer…</option>
+                    {(farmers || []).map((f: any) => (
+                      <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
+                    ))}
+                  </select>
                   {selectedImage ? (
                     <div className="relative">
                       <img src={selectedImage} alt="Field" className="w-full rounded-lg border border-border" />

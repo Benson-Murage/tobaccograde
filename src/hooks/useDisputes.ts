@@ -132,8 +132,21 @@ export function useDisputes() {
 
   const notifyUsers = useCallback(async (recipientIds: string[], title: string, message: string, entityId: string) => {
     if (!companyId) return;
-    const rows = recipientIds
-      .filter(Boolean)
+    const ids = recipientIds.filter(Boolean);
+    if (ids.length === 0) return;
+    // Duplicate prevention: skip a recipient who already has an unread
+    // notification for the same dispute event (same title + entity).
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('user_id')
+      .eq('entity_type', 'dispute')
+      .eq('entity_id', entityId)
+      .eq('title', title)
+      .eq('is_read', false)
+      .in('user_id', ids);
+    const alreadyNotified = new Set(((existing || []) as { user_id: string }[]).map(r => r.user_id));
+    const rows = ids
+      .filter((userId) => !alreadyNotified.has(userId))
       .map((userId) => ({
         user_id: userId,
         company_id: companyId,
