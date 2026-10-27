@@ -207,7 +207,16 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* No active matrix warning: values below are template defaults, not live prices */}
+        {!isLoading && !matrixId && (
+          <div className="flex items-start gap-2 p-4 rounded-lg bg-warning/10 text-warning text-sm border border-warning/30">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              No active price list is saved yet — the values below are template defaults.
+              Graders cannot confirm bale values until you save a price list.
+            </span>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card-elevated p-6">
             <div className="flex items-center gap-4">
