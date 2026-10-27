@@ -93,6 +93,10 @@ export default function GradingPage() {
   const [processingTimeMs, setProcessingTimeMs] = useState<number | undefined>();
   const [overallConfidence, setOverallConfidence] = useState<number | undefined>();
   const [aiExplanation, setAiExplanation] = useState<string | undefined>();
+  // Raw AI analysis persisted with the grading record
+  const [aiAnalysisRaw, setAiAnalysisRaw] = useState<Record<string, unknown> | null>(null);
+  // Storage path of the captured leaf image (uploaded to the private grading-images bucket)
+  const [capturedImagePath, setCapturedImagePath] = useState<string | null>(null);
 
   // Active price list — bale value must come from the configured price rule
   const [activePriceMatrix, setActivePriceMatrix] = useState<Record<string, number> | null>(null);
