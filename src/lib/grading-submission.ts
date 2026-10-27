@@ -214,14 +214,73 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
       };
     }
     
+    // Insert AI prediction first, then link the grader decision to it
+    const warnings: string[] = [];
+    if (submission.aiPrediction) {
+      const p = submission.aiPrediction.raw as any;
+      const predictionRecord: Record<string, unknown> = {
+        company_id: submission.companyId,
+        grading_id: gradingId,
+        ai_model_id: submission.aiPrediction.modelId || null,
+        suggested_grade: submission.aiPrediction.suggestedGrade,
+        suggested_grade_class: submission.aiPrediction.suggestedGradeClass || null,
+        overall_confidence: submission.aiPrediction.overallConfidence ?? null,
+        processing_time_ms: submission.aiPrediction.processingTimeMs ?? null,
+        explanation: p.overall_explanation ?? null,
+        key_factors: p.key_factors ?? [],
+      };
+      if (p.color) {
+        predictionRecord.suggested_color = p.color.value;
+        predictionRecord.suggested_color_confidence = p.color.confidence;
+      }
+      if (p.leaf_position) {
+        predictionRecord.suggested_leaf_position = p.leaf_position.value;
+        predictionRecord.suggested_leaf_position_confidence = p.leaf_position.confidence;
+      }
+      if (p.texture) {
+        predictionRecord.suggested_texture = p.texture.value;
+        predictionRecord.suggested_texture_confidence = p.texture.confidence;
+      }
+      if (p.maturity) {
+        predictionRecord.suggested_maturity = p.maturity.value;
+        predictionRecord.suggested_maturity_confidence = p.maturity.confidence;
+      }
+      if (p.defects) {
+        predictionRecord.defect_percentage = p.defects.total_percentage;
+        predictionRecord.defect_confidence = p.defects.confidence;
+        predictionRecord.detected_defects = p.defects.detected_issues ?? [];
+      }
+      if (p.uniformity) {
+        predictionRecord.uniformity_score = p.uniformity.score;
+      }
+
+      const { data: predictionRow, error: predictionError } = await supabase
+        .from('ai_predictions')
+        .insert([predictionRecord])
+        .select('id')
+        .single();
+
+      if (predictionError || !predictionRow) {
+        console.error('AI prediction insert error:', predictionError);
+        warnings.push('AI analysis details could not be saved to the audit trail.');
+      } else if (aiDecisionRecord) {
+        aiDecisionRecord.ai_prediction_id = predictionRow.id;
+      }
+    }
+
     // Insert AI decision if exists
     if (aiDecisionRecord) {
-      const { error: aiError } = await supabase
-        .from('ai_grader_decisions')
-        .insert([aiDecisionRecord]);
-      
-      if (aiError) {
-        console.error('AI decision insert error:', aiError);
+      if (!aiDecisionRecord.ai_prediction_id) {
+        warnings.push('AI suggestion record is incomplete — the grader decision was not saved.');
+      } else {
+        const { error: aiError } = await supabase
+          .from('ai_grader_decisions')
+          .insert([aiDecisionRecord]);
+
+        if (aiError) {
+          console.error('AI decision insert error:', aiError);
+          warnings.push('The AI review decision could not be saved.');
+        }
       }
     }
     
