@@ -24,6 +24,8 @@ export type AuditAction =
   | 'PRICE_UPDATE'
   | 'RULE_UPDATE'
   | 'EXPORT'
+  | 'INSPECT_PASS'
+  | 'INSPECT_FAIL'
   | 'SYNC'
   | 'DEVICE_REGISTER'
   | 'DEVICE_TRUST'
