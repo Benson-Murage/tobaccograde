@@ -161,19 +161,6 @@ export function QRScanner({ onScan, onClose, className, manualEntryLabel = "Ente
             </Button>
           </>
         ) : (
-          <>
-            <Button onClick={stopScanning} variant="outline">
-              <CameraOff className="h-4 w-4 mr-2" />
-              Stop
-            </Button>
-            {cameras.length > 1 && (
-              <Button onClick={switchCamera} variant="outline">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Switch Camera
-              </Button>
-            )}
-          </>
-        )}
       </div>
 
       {/* Manual entry */}
