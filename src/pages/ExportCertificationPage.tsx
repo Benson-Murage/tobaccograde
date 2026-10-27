@@ -74,6 +74,8 @@ export default function ExportCertificationPage() {
   const [saving, setSaving] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
+  const [addBalesOpen, setAddBalesOpen] = useState(false);
+  const [addBalesBatch, setAddBalesBatch] = useState<ExportBatch | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
