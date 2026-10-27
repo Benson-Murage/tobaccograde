@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Index from "./pages/Index";
 import GradingPage from "./pages/GradingPage";
 import FarmersPage from "./pages/FarmersPage";
+import FarmerProfilePage from "./pages/FarmerProfilePage";
 import BalesPage from "./pages/BalesPage";
 import BaleRegistrationPage from "./pages/BaleRegistrationPage";
 import ScanPage from "./pages/ScanPage";
@@ -79,6 +80,11 @@ const App = () => (
             <Route path="/farmers" element={
               <ProtectedRoute requiredRoles={['grader', 'company_admin', 'quality_supervisor', 'super_admin']}>
                 <FarmersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/farmers/:id" element={
+              <ProtectedRoute requiredRoles={['grader', 'company_admin', 'quality_supervisor', 'super_admin', 'auditor']}>
+                <FarmerProfilePage />
               </ProtectedRoute>
             } />
 
