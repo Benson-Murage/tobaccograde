@@ -365,7 +365,7 @@ export function HardwareGradingWorkflow({ onComplete, className }: HardwareGradi
         <Progress value={progress} className="h-2 mb-4" />
         
         {/* Step indicators */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-y-2">
           {steps.map((step, index) => (
             <div key={step.id} className="flex items-center">
               <div className={cn(
