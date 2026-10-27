@@ -196,7 +196,7 @@ export default function GradingPage() {
             bale_id: currentBaleData.id,
             image_url: path,
             image_type: 'leaf',
-            capture_metadata: metadata,
+            capture_metadata: JSON.parse(JSON.stringify(metadata)),
             device_id: metadata.deviceType,
             captured_at: metadata.timestamp,
           }]);
