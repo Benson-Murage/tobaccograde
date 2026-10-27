@@ -130,6 +130,39 @@ export function useDisputes() {
     fetchDisputes();
   }, [fetchDisputes]);
 
+  const notifyUsers = useCallback(async (recipientIds: string[], title: string, message: string, entityId: string) => {
+    if (!companyId) return;
+    const rows = recipientIds
+      .filter(Boolean)
+      .map((userId) => ({
+        user_id: userId,
+        company_id: companyId,
+        title,
+        message,
+        type: 'dispute',
+        entity_type: 'dispute',
+        entity_id: entityId,
+        is_read: false,
+      }));
+    if (rows.length === 0) return;
+    const { error } = await supabase.from('notifications').insert(rows);
+    if (error) console.error('Failed to create notifications:', error);
+  }, [companyId]);
+
+  const getSupervisorIds = useCallback(async (): Promise<string[]> => {
+    if (!companyId) return [];
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .in('role', ['quality_supervisor', 'company_admin']);
+    if (error) {
+      console.error('Failed to load supervisors for notification:', error);
+      return [];
+    }
+    return (data || []).map((r: any) => r.user_id);
+  }, [companyId]);
+
   const createDispute = async (formData: DisputeFormData): Promise<{ success: boolean; dispute?: Dispute; error?: string }> => {
     if (!user) {
       return { success: false, error: 'Not authenticated' };
@@ -164,6 +197,14 @@ export function useDisputes() {
         entity_id: data.id,
         new_values: { ...formData } as Record<string, unknown>,
       });
+
+      const supervisorIds = await getSupervisorIds();
+      await notifyUsers(
+        supervisorIds.filter((sid) => sid !== user.id),
+        'New dispute requires review',
+        `A grading dispute was raised: ${formData.reason}`,
+        data.id
+      );
 
       await fetchDisputes();
       return { success: true, dispute: data };
