@@ -262,7 +262,7 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
 
       const { data: predictionRow, error: predictionError } = await supabase
         .from('ai_predictions')
-        .insert([predictionRecord])
+        .insert([predictionRecord as Database['public']['Tables']['ai_predictions']['Insert']])
         .select('id')
         .single();
 
