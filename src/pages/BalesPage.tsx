@@ -212,6 +212,9 @@ export default function BalesPage() {
                     <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
                       Warehouse
                     </th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -265,6 +268,21 @@ export default function BalesPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-muted-foreground">{bale.warehouse_name || 'Unknown'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {bale.status === 'graded' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDisputeBale(bale)}
+                            disabled={isProcessing}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Dispute
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
