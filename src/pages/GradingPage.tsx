@@ -284,11 +284,17 @@ export default function GradingPage() {
   }, [position, color, texture, maturity, moisturePercent, defectPercent]);
 
   // Calculate price from the company's active price list.
-  // The grade's configured price is the unit price; no fabricated fallback.
+  // The price list is configured per grade tier (e.g. L1F); a grade like L1L
+  // matches its tier's configured price. No fabricated fallback.
   const priceBreakdown = useMemo(() => {
     if (!gradeResult || !activePriceMatrix) return null;
-    const unitPrice = activePriceMatrix[gradeResult.grade];
-    if (unitPrice === undefined || unitPrice === null || unitPrice < 0) return null;
+    const grade = gradeResult.grade;
+    const tierCode = grade.slice(0, 2) + 'F';
+    const matchedTier = activePriceMatrix[grade] !== undefined ? grade
+      : activePriceMatrix[tierCode] !== undefined ? tierCode : null;
+    if (!matchedTier) return null;
+    const unitPrice = activePriceMatrix[matchedTier];
+    if (unitPrice === null || unitPrice < 0) return null;
 
     const weightKg = hardwareWeight?.value || 0;
     return {
@@ -304,7 +310,9 @@ export default function GradingPage() {
       currency: priceMatrixCurrency,
       factors: [{
         factor: 'Active price list',
-        description: `Grade ${gradeResult.grade} configured at ${unitPrice.toFixed(2)} ${priceMatrixCurrency}/kg`,
+        description: matchedTier === grade
+          ? `Grade ${grade} configured at ${unitPrice.toFixed(2)} ${priceMatrixCurrency}/kg`
+          : `Grade ${grade} priced at tier ${matchedTier}: ${unitPrice.toFixed(2)} ${priceMatrixCurrency}/kg`,
         impact: 0,
         percentage: 0,
       }],
@@ -312,7 +320,8 @@ export default function GradingPage() {
   }, [gradeResult, activePriceMatrix, hardwareWeight, priceMatrixCurrency]);
 
   const gradeMissingFromPriceList = !!gradeResult && !!activePriceMatrix &&
-    activePriceMatrix[gradeResult.grade] === undefined;
+    activePriceMatrix[gradeResult.grade] === undefined &&
+    activePriceMatrix[gradeResult.grade.slice(0, 2) + 'F'] === undefined;
   const cannotPrice = !!gradeResult && priceMatrixChecked &&
     (activePriceMatrix === null || gradeMissingFromPriceList);
 
