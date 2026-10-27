@@ -120,21 +120,7 @@ export function useBales() {
 
   const registerBale = async (formData: BaleFormData): Promise<{ success: boolean; bale?: Bale; error?: string }> => {
     if (!companyId) {
-      const newBale: Bale = {
-        id: crypto.randomUUID(),
-        bale_code: generateBaleCode(),
-        farmer_id: formData.farmer_id,
-        weight_kg: formData.weight_kg,
-        warehouse_id: formData.warehouse_id,
-        status: 'registered',
-        registered_at: new Date().toISOString(),
-        batch_number: formData.batch_number || null,
-        lot_number: formData.lot_number || null,
-        company_id: 'demo',
-      };
-      setBales(prev => [newBale, ...prev]);
-      toast.success('Bale registered successfully');
-      return { success: true, bale: newBale };
+      return { success: false, error: 'Your account is not linked to a company yet. Contact your administrator.' };
     }
 
     try {
@@ -159,6 +145,13 @@ export function useBales() {
       if (insertError) {
         throw insertError;
       }
+
+      await logAudit({
+        action: 'CREATE',
+        entity_type: 'bale',
+        entity_id: data.id,
+        new_values: { ...data } as Record<string, unknown>,
+      });
 
       await fetchBales();
       toast.success('Bale registered successfully');
