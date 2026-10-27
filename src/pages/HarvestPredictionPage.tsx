@@ -105,14 +105,22 @@ export default function HarvestPredictionPage() {
           if (profile?.company_id) {
             await supabase.from('harvest_predictions').insert({
               company_id: profile.company_id,
-              farmer_id: user.id, // Placeholder; real flow would select farmer
+              farmer_id: selectedFarmerId,
               predicted_grade: data.prediction.predicted_grade.grade,
               predicted_grade_class: data.prediction.predicted_grade.grade_class,
               confidence: data.prediction.predicted_grade.confidence,
               predicted_yield_kg: data.prediction.yield_estimate.kg_per_hectare,
               predicted_value: data.prediction.value_estimate.total_estimate_per_hectare,
+              currency: 'USD',
               ai_analysis: data.prediction,
               processing_time_ms: data.prediction.processing_time_ms,
+            }).then(({ error: insertError }) => {
+              if (insertError) {
+                console.error('Harvest prediction insert error:', insertError);
+                toast.warning('Prediction result could not be saved', {
+                  description: 'The prediction was generated but the record was not stored. Please try again.'
+                });
+              }
             });
           }
         }
