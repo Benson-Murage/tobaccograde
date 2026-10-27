@@ -16,6 +16,7 @@ export interface Bale {
   farmer_id: string;
   farmer_name?: string;
   farmer_code?: string;
+  grading_id?: string;
   weight_kg: number;
   warehouse_id: string;
   warehouse_name?: string;
@@ -68,6 +69,7 @@ export function useBales() {
             name
           ),
           gradings (
+            id,
             grade_code,
             grade_class
           )
@@ -86,6 +88,7 @@ export function useBales() {
         farmer_id: b.farmer_id,
         farmer_name: b.farmers?.full_name,
         farmer_code: b.farmers?.farmer_code,
+        grading_id: b.gradings?.[0]?.id || undefined,
         weight_kg: b.weight_kg,
         warehouse_id: b.warehouse_id,
         warehouse_name: b.warehouses?.name,
