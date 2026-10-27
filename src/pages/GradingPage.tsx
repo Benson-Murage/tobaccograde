@@ -314,7 +314,7 @@ export default function GradingPage() {
         baleCode: currentBaleData.code,
         farmerId: currentBaleData.farmerId,
         warehouseId: currentBaleData.warehouseId,
-        companyId: companyId || 'demo-company',
+        companyId,
         weight: hardwareWeight,
         moisture: hardwareMoisture,
         leafPosition: position,
