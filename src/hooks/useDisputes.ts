@@ -59,30 +59,40 @@ export function useDisputes() {
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('disputes')
-        .select(`
-          *,
-          gradings (
-            grade_code,
-            bales (
-              bale_code,
-              farmers (
-                full_name,
-                farmer_code
+      // grader_id references auth.users, which has no REST embed path —
+      // fetch grader names separately to keep this query working.
+      const [disputesRes, profilesRes] = await Promise.all([
+        supabase
+          .from('disputes')
+          .select(`
+            *,
+            gradings (
+              grade_code,
+              bales (
+                bale_code,
+                farmers (
+                  full_name,
+                  farmer_code
+                )
               )
-            ),
-            profiles:grader_id (
-              full_name
             )
-          )
-        `)
-        .eq('company_id', companyId)
-        .order('raised_at', { ascending: false });
+          `)
+          .eq('company_id', companyId)
+          .order('raised_at', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('company_id', companyId),
+      ]);
 
+      const { data, error: fetchError } = disputesRes;
       if (fetchError) {
         throw fetchError;
       }
+
+      const graderNames = new Map<string, string>(
+        (profilesRes.data || []).map((p: any) => [p.id, p.full_name])
+      );
 
       const transformed: Dispute[] = (data || []).map((d: any) => ({
         id: d.id,
@@ -102,7 +112,7 @@ export function useDisputes() {
         farmer_name: d.gradings?.bales?.farmers?.full_name,
         farmer_id: d.gradings?.bales?.farmers?.farmer_code,
         original_grade: d.gradings?.grade_code,
-        grader_name: d.gradings?.profiles?.full_name,
+        grader_name: graderNames.get(d.grader_id ?? '') || graderNames.get(d.raised_by ?? ''),
       }));
 
       setDisputes(transformed);
