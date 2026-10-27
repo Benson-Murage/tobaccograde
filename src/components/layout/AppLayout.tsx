@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
+import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
 import { useAuth } from "@/lib/auth";
 
 interface AppLayoutProps {
@@ -27,6 +28,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         onSignOut={isAuthenticated ? signOut : undefined}
       />
       <main className="lg:pl-64 min-h-screen">
+        <div className="fixed top-4 right-4 z-50 hidden lg:block">
+          <SyncStatusIndicator />
+        </div>
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
           {children}
         </div>
