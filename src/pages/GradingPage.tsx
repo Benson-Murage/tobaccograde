@@ -176,6 +176,39 @@ export default function GradingPage() {
     setCapturedImage(imageData);
     setShowCamera(false);
     setIsAnalyzing(true);
+    setCapturedImagePath(null);
+
+    // Persist the captured image first — it must survive even if AI analysis fails,
+    // so the human grader always has the evidence attached to the bale.
+    if (companyId && currentBaleData) {
+      try {
+        const blob = await (await fetch(imageData)).blob();
+        const path = `${companyId}/${currentBaleData.id}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('grading-images')
+          .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { error: imageRecordError } = await supabase
+          .from('grading_images')
+          .insert([{
+            company_id: companyId,
+            bale_id: currentBaleData.id,
+            image_url: path,
+            image_type: 'leaf',
+            capture_metadata: metadata,
+            device_id: metadata.deviceType,
+            captured_at: metadata.timestamp,
+          }]);
+        if (imageRecordError) throw imageRecordError;
+        setCapturedImagePath(path);
+      } catch (error) {
+        console.error('Image persistence error:', error);
+        toast.error("Could not save captured image", {
+          description: "The photo was not attached to this bale. Check your connection and try again."
+        });
+      }
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-tobacco-leaf', {
