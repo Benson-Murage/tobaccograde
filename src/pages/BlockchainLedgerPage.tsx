@@ -69,9 +69,11 @@ export default function BlockchainLedgerPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Link2 className="h-6 w-6 text-primary" />
-            Blockchain Traceability Ledger
+            Traceability Ledger
           </h1>
-          <p className="text-muted-foreground">Tamper-proof hash-chain record of all batch lifecycle events</p>
+          <p className="text-muted-foreground">
+            Internal tamper-evident hash-chain record of all batch lifecycle events (append-only, not a public blockchain)
+          </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
