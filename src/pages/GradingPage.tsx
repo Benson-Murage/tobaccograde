@@ -300,7 +300,7 @@ export default function GradingPage() {
 
   // Handle grading submission
   const handleConfirmGrade = async () => {
-    if (!gradeResult || !position || !color || !texture || !maturity || 
+    if (!companyId || !gradeResult || !position || !color || !texture || !maturity || 
         moisturePercent === null || defectPercent === null ||
         !hardwareWeight || !hardwareMoisture || !currentBaleData) {
       toast.error("Missing required data");
