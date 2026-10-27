@@ -45,7 +45,8 @@ export function useBales() {
 
   const fetchBales = useCallback(async () => {
     if (!companyId) {
-      setBales(getDemoBales());
+      setBales([]);
+      setError('Your account is not linked to a company yet. Contact your administrator.');
       setIsLoading(false);
       return;
     }
@@ -100,8 +101,8 @@ export function useBales() {
       setBales(transformed);
     } catch (err) {
       console.error('Error fetching bales:', err);
-      setError('Failed to load bales');
-      setBales(getDemoBales());
+      setError(err instanceof Error ? err.message : 'Failed to load bales');
+      setBales([]);
     } finally {
       setIsLoading(false);
     }
