@@ -208,7 +208,7 @@ async function syncItem(item: SyncQueueItem): Promise<boolean> {
       return false;
     }
     const { error } = await supabase
-      .from(item.entity_type as string)
+      .from(item.entity_type as never)
       .upsert([item.payload] as never);
     if (error) {
       console.error('Sync error for item:', item.id, error);
