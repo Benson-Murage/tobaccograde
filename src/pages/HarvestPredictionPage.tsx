@@ -30,9 +30,30 @@ const gradeColors: Record<string, string> = {
 };
 
 export default function HarvestPredictionPage() {
+  const { companyId } = useAuth();
   const [analyzing, setAnalyzing] = useState(false);
   const [prediction, setPrediction] = useState<HarvestPrediction | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFarmerId, setSelectedFarmerId] = useState<string>('');
+
+  // Farmer whose field is being analysed — required so predictions are
+  // attributed to a real grower record instead of the signed-in user
+  const { data: farmers } = useQuery({
+    queryKey: ['harvest-farmers', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('id, full_name, farmer_code')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .order('full_name')
+        .limit(500);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
 
   const { data: predictions } = useQuery({
     queryKey: ['harvest-predictions'],
