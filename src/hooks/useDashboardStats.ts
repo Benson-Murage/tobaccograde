@@ -53,21 +53,6 @@ export function useDashboardStats() {
 
   const fetchStats = useCallback(async () => {
     if (!companyId) {
-      // Demo mode fallback
-      setStats({
-        totalBalesToday: 847,
-        pendingGrading: 342,
-        balesGraded: 505,
-        completionRate: 89,
-        totalValue: 128450,
-        avgValuePerBale: 254,
-        activeFarmers: 1247,
-        deliveriesToday: 156,
-        pendingDisputes: 12,
-        averageGrade: 'L2F',
-        gradingAccuracy: 98.2,
-      });
-      setRecentGradings(getDemoRecentGradings());
       setIsLoading(false);
       return;
     }
@@ -87,7 +72,7 @@ export function useDashboardStats() {
           .gte('registered_at', todayISO),
         supabase
           .from('gradings')
-          .select('id, grade_code, grade_class', { count: 'exact' })
+          .select('id, grade_code, grade_class, ai_grader_decisions ( overall_decision ), grading_prices ( total_value )', { count: 'exact' })
           .eq('company_id', companyId)
           .gte('graded_at', todayISO),
         supabase
