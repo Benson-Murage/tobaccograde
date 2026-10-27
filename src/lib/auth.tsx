@@ -77,36 +77,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    const loadUserData = async (currentUser: User | null) => {
+      if (currentUser) {
+        // Await profile/roles so role-gated routes never see an empty role list
+        await fetchUserData(currentUser.id);
+      } else {
+        setProfile(null);
+        setRoles([]);
+      }
+      if (mounted) setIsLoading(false);
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          // Use setTimeout to avoid potential race conditions
-          setTimeout(() => {
-            fetchUserData(currentSession.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-        }
-        setIsLoading(false);
+        // Use setTimeout to avoid potential race conditions with Supabase auth
+        setTimeout(() => {
+          loadUserData(currentSession?.user ?? null);
+        }, 0);
       }
     );
 
     // Then get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
-      if (initialSession?.user) {
-        fetchUserData(initialSession.user.id);
-      }
-      setIsLoading(false);
+      await loadUserData(initialSession?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const hasRole = (role: AppRole): boolean => {
