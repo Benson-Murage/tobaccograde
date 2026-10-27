@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { getDeviceId, getDeviceFingerprint, queueForSync, isOnline } from './offline-sync';
 import { logAudit, auditGrade } from './audit-logger';
 import type { LeafPosition, TobaccoColor, TobaccoTexture, TobaccoMaturity, QualityBand } from './tobacco-grading';
