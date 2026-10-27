@@ -388,7 +388,7 @@ export default function GradingPage() {
         gradeClass: gradeResult.class,
         unitPrice: priceBreakdown?.finalPricePerKg || 0,
         totalValue: priceBreakdown?.totalValue || 0,
-        currency: 'USD',
+        currency: priceBreakdown?.currency || priceMatrixCurrency,
         riskScore: auditRiskScore,
         requiresSupervisorApproval,
       };
@@ -776,7 +776,7 @@ export default function GradingPage() {
             <Button 
               variant="enterprise" 
               size="lg" 
-              disabled={!gradeResult || isSubmitting} 
+              disabled={!gradeResult || isSubmitting || cannotPrice} 
               onClick={handleConfirmGrade}
               className="w-full sm:w-auto"
             >
@@ -789,6 +789,16 @@ export default function GradingPage() {
               {!isSubmitting && <ChevronRight className="h-5 w-5 ml-1" />}
             </Button>
           </div>
+          {cannotPrice && (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-warning/10 text-warning text-sm">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>
+                {gradeMissingFromPriceList
+                  ? `Grade ${gradeResult?.grade} has no price in the active price list. Ask an administrator to configure pricing before confirming.`
+                  : 'No active price list is configured for this company. Bale value cannot be calculated until pricing is set up.'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>
