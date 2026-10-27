@@ -19,7 +19,7 @@ interface DashboardStats {
   deliveriesToday: number;
   pendingDisputes: number;
   averageGrade: string;
-  gradingAccuracy: number;
+  aiAgreement: number | null;
 }
 
 interface RecentGrading {
@@ -46,7 +46,7 @@ export function useDashboardStats() {
     deliveriesToday: 0,
     pendingDisputes: 0,
     averageGrade: '--',
-    gradingAccuracy: 0,
+    aiAgreement: null,
   });
   const [recentGradings, setRecentGradings] = useState<RecentGrading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,12 +175,3 @@ export function useDashboardStats() {
   return { stats, recentGradings, isLoading, refetch: fetchStats };
 }
 
-function getDemoRecentGradings(): RecentGrading[] {
-  return [
-    { id: '1', baleCode: 'BL-2024-00847', farmer: 'Peter Nyambi', grade: 'L1F', gradeClass: 'premium', grader: 'James Mwale', timestamp: new Date(Date.now() - 2 * 60000).toISOString(), weight: 42.5 },
-    { id: '2', baleCode: 'BL-2024-00846', farmer: 'Sarah Tembo', grade: 'L3F', gradeClass: 'good', grader: 'James Mwale', timestamp: new Date(Date.now() - 5 * 60000).toISOString(), weight: 38.2 },
-    { id: '3', baleCode: 'BL-2024-00845', farmer: 'John Phiri', grade: 'C2F', gradeClass: 'standard', grader: 'Mary Banda', timestamp: new Date(Date.now() - 12 * 60000).toISOString(), weight: 45.0 },
-    { id: '4', baleCode: 'BL-2024-00844', farmer: 'Grace Mwanza', grade: 'X1F', gradeClass: 'low', grader: 'Mary Banda', timestamp: new Date(Date.now() - 18 * 60000).toISOString(), weight: 36.8 },
-    { id: '5', baleCode: 'BL-2024-00843', farmer: 'David Lungu', grade: 'REJ', gradeClass: 'rejected', grader: 'James Mwale', timestamp: new Date(Date.now() - 25 * 60000).toISOString(), weight: 28.5 },
-  ];
-}
