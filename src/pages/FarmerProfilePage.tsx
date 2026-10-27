@@ -221,12 +221,7 @@ export default function FarmerProfilePage() {
         .in("id", stillUnpaid.map((b: any) => b.id));
       if (baleUpdateError) throw baleUpdateError;
 
-      await logAudit({
-        action: "CREATE",
-        entity_type: "payment",
-        entity_id: payment.id,
-        new_values: { farmer: farmer.full_name, bales: stillUnpaid.length, total_value: value, total_weight_kg: weight },
-      });
+      // Audit trail is written by the audit_payments database trigger.
       toast.success(`Payment recorded: ${value.toFixed(2)} USD for ${stillUnpaid.length} bale(s)`);
       setPayOpen(false);
       load();
