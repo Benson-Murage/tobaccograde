@@ -430,6 +430,15 @@ export default function GradingPage() {
               { decision: val.decision as 'accept' | 'modify' | 'reject', aiValue: val.aiValue, finalValue: val.finalValue }
             ])
           ) : undefined,
+        capturedImageUrl: capturedImagePath || undefined,
+        aiPrediction: aiAnalysisRaw ? {
+          suggestedGrade: gradeResult.grade,
+          suggestedGradeClass: (aiAnalysisRaw.suggested_grade as any)?.grade_class,
+          overallConfidence: overallConfidence,
+          processingTimeMs: processingTimeMs,
+          modelId: (aiAnalysisRaw.model_used as string) || null,
+          raw: aiAnalysisRaw,
+        } : undefined,
         gradeCode: gradeResult.grade,
         gradeClass: gradeResult.class,
         unitPrice: priceBreakdown?.finalPricePerKg || 0,
