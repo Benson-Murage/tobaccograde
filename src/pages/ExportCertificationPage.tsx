@@ -359,6 +359,13 @@ export default function ExportCertificationPage() {
           </div>
         )}
       </div>
+
+      <AddBalesToBatchDialog
+        open={addBalesOpen}
+        onOpenChange={setAddBalesOpen}
+        batch={addBalesBatch ? { id: addBalesBatch.id, batch_code: addBalesBatch.batch_code, warehouse_id: addBalesBatch.warehouse_id, company_id: companyId || "" } : null}
+        onSaved={fetchData}
+      />
     </AppLayout>
   );
 }
