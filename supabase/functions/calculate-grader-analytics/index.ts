@@ -49,6 +49,29 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Scope analytics to the caller's own company unless they are a super admin
+    const { data: membership } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    const { data: isSuperAdmin } = await supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", authUser.id)
+      .eq("role", "super_admin")
+      .limit(1)
+      .maybeSingle();
+    if (isSuperAdmin == null) {
+      // fall through: treat as non-super-admin
+    }
+    if (membership?.company_id !== company_id && isSuperAdmin == null) {
+      return new Response(
+        JSON.stringify({ success: false, error: "You can only request analytics for your own company" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Default to last 30 days if not specified
     const startDate = period_start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const endDate = period_end || new Date().toISOString().split('T')[0];
