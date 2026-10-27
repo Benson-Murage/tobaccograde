@@ -319,15 +319,28 @@ export default function ExportCertificationPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setAddBalesBatch(batch); setAddBalesOpen(true); }}>
+                      <Package className="h-4 w-4 mr-1" /> Add Bales
+                    </Button>
                     {batch.status === "draft" && (
-                      <Button variant="outline" size="sm" onClick={() => {
+                      <Button variant="outline" size="sm" disabled={batch.total_bales === 0} onClick={() => {
                         supabase.from("export_batches").update({ status: "pending_inspection" }).eq("id", batch.id)
                           .then(() => { toast.success("Submitted for inspection"); fetchData(); });
                       }}>
                         Submit for Inspection
                       </Button>
                     )}
-                    {(batch.status === "pending_inspection" || batch.status === "inspected") && (
+                    {batch.status === "pending_inspection" && (
+                      <>
+                        <Button variant="enterprise" size="sm" onClick={() => handleRecordInspection(batch, true)}>
+                          <CheckCircle className="h-4 w-4 mr-1" /> Pass Inspection
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleRecordInspection(batch, false)}>
+                          <XCircle className="h-4 w-4 mr-1" /> Fail
+                        </Button>
+                      </>
+                    )}
+                    {batch.status === "inspected" && batch.inspection_status === "passed" && (
                       <Button variant="enterprise" size="sm" onClick={() => handleCertify(batch)}>
                         <CheckCircle className="h-4 w-4 mr-1" /> Certify
                       </Button>
