@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logAudit } from '@/lib/audit-logger';
 
 export interface Bale {
   id: string;
@@ -15,6 +16,7 @@ export interface Bale {
   farmer_id: string;
   farmer_name?: string;
   farmer_code?: string;
+  grading_id?: string;
   weight_kg: number;
   warehouse_id: string;
   warehouse_name?: string;
@@ -45,7 +47,8 @@ export function useBales() {
 
   const fetchBales = useCallback(async () => {
     if (!companyId) {
-      setBales(getDemoBales());
+      setBales([]);
+      setError('Your account is not linked to a company yet. Contact your administrator.');
       setIsLoading(false);
       return;
     }
@@ -66,6 +69,7 @@ export function useBales() {
             name
           ),
           gradings (
+            id,
             grade_code,
             grade_class
           )
@@ -84,6 +88,7 @@ export function useBales() {
         farmer_id: b.farmer_id,
         farmer_name: b.farmers?.full_name,
         farmer_code: b.farmers?.farmer_code,
+        grading_id: b.gradings?.[0]?.id || undefined,
         weight_kg: b.weight_kg,
         warehouse_id: b.warehouse_id,
         warehouse_name: b.warehouses?.name,
@@ -100,8 +105,8 @@ export function useBales() {
       setBales(transformed);
     } catch (err) {
       console.error('Error fetching bales:', err);
-      setError('Failed to load bales');
-      setBales(getDemoBales());
+      setError(err instanceof Error ? err.message : 'Failed to load bales');
+      setBales([]);
     } finally {
       setIsLoading(false);
     }
@@ -119,21 +124,7 @@ export function useBales() {
 
   const registerBale = async (formData: BaleFormData): Promise<{ success: boolean; bale?: Bale; error?: string }> => {
     if (!companyId) {
-      const newBale: Bale = {
-        id: crypto.randomUUID(),
-        bale_code: generateBaleCode(),
-        farmer_id: formData.farmer_id,
-        weight_kg: formData.weight_kg,
-        warehouse_id: formData.warehouse_id,
-        status: 'registered',
-        registered_at: new Date().toISOString(),
-        batch_number: formData.batch_number || null,
-        lot_number: formData.lot_number || null,
-        company_id: 'demo',
-      };
-      setBales(prev => [newBale, ...prev]);
-      toast.success('Bale registered successfully');
-      return { success: true, bale: newBale };
+      return { success: false, error: 'Your account is not linked to a company yet. Contact your administrator.' };
     }
 
     try {
@@ -159,6 +150,13 @@ export function useBales() {
         throw insertError;
       }
 
+      await logAudit({
+        action: 'CREATE',
+        entity_type: 'bale',
+        entity_id: data.id,
+        new_values: { ...data } as Record<string, unknown>,
+      });
+
       await fetchBales();
       toast.success('Bale registered successfully');
       return { success: true, bale: data };
@@ -171,15 +169,15 @@ export function useBales() {
 
   const updateBaleStatus = async (id: string, status: Bale['status']): Promise<{ success: boolean; error?: string }> => {
     if (!companyId) {
-      setBales(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-      return { success: true };
+      return { success: false, error: 'Your account is not linked to a company yet.' };
     }
 
     try {
       const { error: updateError } = await supabase
         .from('bales')
         .update({ status })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('company_id', companyId);
 
       if (updateError) {
         throw updateError;
@@ -228,94 +226,4 @@ export function useBales() {
     filterByStatus,
     refetch: fetchBales,
   };
-}
-
-function getDemoBales(): Bale[] {
-  return [
-    {
-      id: '1',
-      bale_code: 'BL-2024-00848',
-      farmer_id: 'demo-1',
-      farmer_name: 'Peter Nyambi',
-      farmer_code: 'FRM-001234',
-      weight_kg: 42.5,
-      warehouse_id: 'wh-a',
-      warehouse_name: 'Warehouse A',
-      status: 'pending_grading',
-      grade_code: null,
-      grade_class: null,
-      registered_at: '2024-01-12T08:00:00Z',
-      batch_number: null,
-      lot_number: null,
-      company_id: 'demo',
-    },
-    {
-      id: '2',
-      bale_code: 'BL-2024-00847',
-      farmer_id: 'demo-1',
-      farmer_name: 'Peter Nyambi',
-      farmer_code: 'FRM-001234',
-      weight_kg: 38.2,
-      warehouse_id: 'wh-a',
-      warehouse_name: 'Warehouse A',
-      status: 'graded',
-      grade_code: 'L1F',
-      grade_class: 'premium',
-      registered_at: '2024-01-12T07:30:00Z',
-      batch_number: 'BATCH-001',
-      lot_number: null,
-      company_id: 'demo',
-    },
-    {
-      id: '3',
-      bale_code: 'BL-2024-00846',
-      farmer_id: 'demo-2',
-      farmer_name: 'Sarah Tembo',
-      farmer_code: 'FRM-001235',
-      weight_kg: 45.0,
-      warehouse_id: 'wh-b',
-      warehouse_name: 'Warehouse B',
-      status: 'graded',
-      grade_code: 'L3F',
-      grade_class: 'good',
-      registered_at: '2024-01-12T07:00:00Z',
-      batch_number: 'BATCH-002',
-      lot_number: null,
-      company_id: 'demo',
-    },
-    {
-      id: '4',
-      bale_code: 'BL-2024-00845',
-      farmer_id: 'demo-3',
-      farmer_name: 'John Phiri',
-      farmer_code: 'FRM-001236',
-      weight_kg: 36.8,
-      warehouse_id: 'wh-a',
-      warehouse_name: 'Warehouse A',
-      status: 'disputed',
-      grade_code: 'C2F',
-      grade_class: 'standard',
-      registered_at: '2024-01-11T15:00:00Z',
-      batch_number: 'BATCH-001',
-      lot_number: null,
-      company_id: 'demo',
-    },
-    {
-      id: '5',
-      bale_code: 'BL-2024-00844',
-      farmer_id: 'demo-4',
-      farmer_name: 'Grace Mwanza',
-      farmer_code: 'FRM-001237',
-      weight_kg: 41.2,
-      warehouse_id: 'wh-b',
-      warehouse_name: 'Warehouse B',
-      status: 'paid',
-      grade_code: 'L2F',
-      grade_class: 'good',
-      registered_at: '2024-01-11T14:00:00Z',
-      batch_number: 'BATCH-002',
-      lot_number: null,
-      company_id: 'demo',
-    },
-  ];
 }

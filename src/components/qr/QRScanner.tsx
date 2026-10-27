@@ -8,13 +8,16 @@ interface QRScannerProps {
   onScan: (result: string) => void;
   onClose?: () => void;
   className?: string;
+  manualEntryLabel?: string;
 }
 
-export function QRScanner({ onScan, onClose, className }: QRScannerProps) {
+export function QRScanner({ onScan, onClose, className, manualEntryLabel = "Enter code manually" }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [currentCamera, setCurrentCamera] = useState<number>(0);
+  const [manualCode, setManualCode] = useState("");
+  const [showManual, setShowManual] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<string>("qr-reader-" + Math.random().toString(36).substr(2, 9));
 
@@ -147,10 +150,16 @@ export function QRScanner({ onScan, onClose, className }: QRScannerProps) {
       {/* Controls */}
       <div className="flex gap-2 mt-4">
         {!isScanning ? (
-          <Button onClick={startScanning} variant="enterprise" disabled={!!error && !cameras.length}>
-            <Camera className="h-4 w-4 mr-2" />
-            Start Scanning
-          </Button>
+          <>
+            <Button onClick={startScanning} variant="enterprise" disabled={!!error && !cameras.length}>
+              <Camera className="h-4 w-4 mr-2" />
+              Start Scanning
+            </Button>
+            <Button onClick={() => setShowManual(!showManual)} variant="outline">
+              <CameraOff className="h-4 w-4 mr-2" />
+              {manualEntryLabel}
+            </Button>
+          </>
         ) : (
           <>
             <Button onClick={stopScanning} variant="outline">
@@ -166,6 +175,34 @@ export function QRScanner({ onScan, onClose, className }: QRScannerProps) {
           </>
         )}
       </div>
+
+      {/* Manual entry */}
+      {showManual && !isScanning && (
+        <form
+          className="mt-4 w-full max-w-sm flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const code = manualCode.trim();
+            if (code) {
+              stopScanning();
+              onScan(code);
+              setManualCode("");
+            }
+          }}
+        >
+          <input
+            type="text"
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            placeholder="Type or key in the code"
+            autoFocus
+            className="flex-1 h-10 px-3 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <Button type="submit" variant="enterprise" disabled={!manualCode.trim()}>
+            Look Up
+          </Button>
+        </form>
+      )}
 
       {/* Instructions */}
       <div className="mt-4 text-center">

@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { toast } from 'sonner';
 
 interface DashboardStats {
   totalBalesToday: number;
@@ -19,7 +20,7 @@ interface DashboardStats {
   deliveriesToday: number;
   pendingDisputes: number;
   averageGrade: string;
-  gradingAccuracy: number;
+  aiAgreement: number | null;
 }
 
 interface RecentGrading {
@@ -46,28 +47,13 @@ export function useDashboardStats() {
     deliveriesToday: 0,
     pendingDisputes: 0,
     averageGrade: '--',
-    gradingAccuracy: 0,
+    aiAgreement: null,
   });
   const [recentGradings, setRecentGradings] = useState<RecentGrading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     if (!companyId) {
-      // Demo mode fallback
-      setStats({
-        totalBalesToday: 847,
-        pendingGrading: 342,
-        balesGraded: 505,
-        completionRate: 89,
-        totalValue: 128450,
-        avgValuePerBale: 254,
-        activeFarmers: 1247,
-        deliveriesToday: 156,
-        pendingDisputes: 12,
-        averageGrade: 'L2F',
-        gradingAccuracy: 98.2,
-      });
-      setRecentGradings(getDemoRecentGradings());
       setIsLoading(false);
       return;
     }
@@ -87,7 +73,7 @@ export function useDashboardStats() {
           .gte('registered_at', todayISO),
         supabase
           .from('gradings')
-          .select('id, grade_code, grade_class', { count: 'exact' })
+          .select('id, grade_code, grade_class, ai_grader_decisions ( overall_decision ), grading_prices ( total_value )', { count: 'exact' })
           .eq('company_id', companyId)
           .gte('graded_at', todayISO),
         supabase
@@ -127,6 +113,21 @@ export function useDashboardStats() {
       });
       const topGrade = Object.entries(gradeMap).sort((a, b) => b[1] - a[1])[0];
 
+      // Real value + AI agreement metrics from today's gradings
+      const totalValue = gradingsData.reduce(
+        (sum, g: any) => sum + Number(g.grading_prices?.[0]?.total_value || 0), 0);
+      const avgValuePerBale = gradedCount > 0 ? Math.round((totalValue / gradedCount) * 100) / 100 : 0;
+      let aiDecisions = 0;
+      let aiAccepted = 0;
+      gradingsData.forEach((g: any) => {
+        const dec = g.ai_grader_decisions?.[0];
+        if (dec) {
+          aiDecisions += 1;
+          if (dec.overall_decision === 'accepted') aiAccepted += 1;
+        }
+      });
+      const aiAgreement = aiDecisions > 0 ? Math.round((aiAccepted / aiDecisions) * 1000) / 10 : null;
+
       const completionRate = totalBales > 0 ? Math.round((gradedCount / totalBales) * 100) : 0;
 
       setStats({
@@ -134,13 +135,13 @@ export function useDashboardStats() {
         pendingGrading,
         balesGraded: gradedCount,
         completionRate,
-        totalValue: 0, // Would come from grading_prices join
-        avgValuePerBale: 0,
+        totalValue,
+        avgValuePerBale,
         activeFarmers,
         deliveriesToday: totalBales,
         pendingDisputes,
         averageGrade: topGrade?.[0] || '--',
-        gradingAccuracy: 98.2, // Placeholder until analytics are calculated
+        aiAgreement,
       });
 
       // Transform recent gradings
@@ -158,25 +159,11 @@ export function useDashboardStats() {
           weight: g.bales?.weight_kg || 0,
         };
       });
-      setRecentGradings(recent.length > 0 ? recent : getDemoRecentGradings());
-
+      setRecentGradings(recent);
     } catch (error) {
       console.error('Dashboard stats error:', error);
-      // Fallback to demo
-      setStats({
-        totalBalesToday: 847,
-        pendingGrading: 342,
-        balesGraded: 505,
-        completionRate: 89,
-        totalValue: 128450,
-        avgValuePerBale: 254,
-        activeFarmers: 1247,
-        deliveriesToday: 156,
-        pendingDisputes: 12,
-        averageGrade: 'L2F',
-        gradingAccuracy: 98.2,
-      });
-      setRecentGradings(getDemoRecentGradings());
+      toast.error('Failed to load dashboard statistics');
+      setRecentGradings([]);
     } finally {
       setIsLoading(false);
     }
@@ -189,12 +176,3 @@ export function useDashboardStats() {
   return { stats, recentGradings, isLoading, refetch: fetchStats };
 }
 
-function getDemoRecentGradings(): RecentGrading[] {
-  return [
-    { id: '1', baleCode: 'BL-2024-00847', farmer: 'Peter Nyambi', grade: 'L1F', gradeClass: 'premium', grader: 'James Mwale', timestamp: new Date(Date.now() - 2 * 60000).toISOString(), weight: 42.5 },
-    { id: '2', baleCode: 'BL-2024-00846', farmer: 'Sarah Tembo', grade: 'L3F', gradeClass: 'good', grader: 'James Mwale', timestamp: new Date(Date.now() - 5 * 60000).toISOString(), weight: 38.2 },
-    { id: '3', baleCode: 'BL-2024-00845', farmer: 'John Phiri', grade: 'C2F', gradeClass: 'standard', grader: 'Mary Banda', timestamp: new Date(Date.now() - 12 * 60000).toISOString(), weight: 45.0 },
-    { id: '4', baleCode: 'BL-2024-00844', farmer: 'Grace Mwanza', grade: 'X1F', gradeClass: 'low', grader: 'Mary Banda', timestamp: new Date(Date.now() - 18 * 60000).toISOString(), weight: 36.8 },
-    { id: '5', baleCode: 'BL-2024-00843', farmer: 'David Lungu', grade: 'REJ', gradeClass: 'rejected', grader: 'James Mwale', timestamp: new Date(Date.now() - 25 * 60000).toISOString(), weight: 28.5 },
-  ];
-}

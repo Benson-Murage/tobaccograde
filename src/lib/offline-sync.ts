@@ -122,12 +122,98 @@ export function clearSyncedItems(): void {
   saveStore(store);
 }
 
+// Whitelist of tables the generic sync path may write to
+const SYNCABLE_TABLES = new Set(['grading', 'gradings']);
+
+// Persist a queued offline grading submission to the database
+async function syncGrading(payload: {
+  grading: Record<string, unknown>;
+  aiDecision: Record<string, unknown> | null;
+  price: Record<string, unknown> | null;
+  submission: { baleId: string };
+}): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    // Retry later once the device has an authenticated session
+    console.error('Sync deferred: no authenticated session yet');
+    return false;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const grading: any = {
+    ...payload.grading,
+    grader_id: user.id,
+    graded_offline: true,
+    sync_status: 'synced' as const,
+    synced_at: new Date().toISOString(),
+  };
+
+  // Duplicate protection: if this grading already made it to the server, skip
+  const { data: existing } = await supabase
+    .from('gradings')
+    .select('id')
+    .eq('id', String(grading.id))
+    .maybeSingle();
+  if (existing) {
+    return true;
+  }
+
+  const { error } = await supabase.from('gradings').insert([grading] as never);
+  if (error) {
+    console.error('Grading sync error:', error);
+    return false;
+  }
+
+  if (payload.aiDecision) {
+    const { error: aiError } = await supabase.from('ai_grader_decisions').insert([{
+      ...payload.aiDecision,
+      grader_id: user.id,
+    }] as never);
+    if (aiError) console.error('AI decision sync error:', aiError);
+  }
+
+  if (payload.price) {
+    const { error: priceError } = await supabase.from('grading_prices').insert([payload.price] as never);
+    if (priceError) console.error('Grading price sync error:', priceError);
+  }
+
+  const companyId = String(payload.grading.company_id ?? '');
+  await supabase.from('audit_logs').insert([{
+    company_id: companyId || null,
+    user_id: user.id,
+    action: 'INSERT',
+    entity_type: 'grading',
+    entity_id: String(grading.id),
+    new_values: grading,
+  }] as never);
+
+  if (payload.submission?.baleId) {
+    await supabase
+      .from('bales')
+      .update({ status: 'graded' })
+      .eq('id', payload.submission.baleId);
+  }
+
+  return true;
+}
+
 // Sync a single item
 async function syncItem(item: SyncQueueItem): Promise<boolean> {
   try {
-    // For now, just mark as synced - actual sync logic would go here
-    // This avoids type issues with dynamic table names
-    console.log('Syncing item:', item.entity_type, item.operation, item.entity_id);
+    if (item.entity_type === 'grading' && item.operation === 'INSERT') {
+      return await syncGrading(item.payload as never);
+    }
+    if (!SYNCABLE_TABLES.has(item.entity_type)) {
+      console.error('No sync handler for entity type:', item.entity_type);
+      return false;
+    }
+    const { error } = await supabase
+      .from(item.entity_type as never)
+      .upsert([item.payload] as never);
+    if (error) {
+      console.error('Sync error for item:', item.id, error);
+      return false;
+    }
     return true;
   } catch (error) {
     console.error('Sync error for item:', item.id, error);

@@ -6,10 +6,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+
+// Verify the caller's JWT; requests without a valid session are rejected
+async function verifyUser(req: Request): Promise<{ id: string } | null> {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !anonKey) return null;
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { Authorization: authHeader, apikey: anonKey },
+  });
+  if (!res.ok) return null;
+  const user = await res.json();
+  return user?.id ? { id: user.id } : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const authUser = await verifyUser(req);
+  if (!authUser) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Authentication required" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
 
   try {
     const { company_id, period_start, period_end } = await req.json();
@@ -24,6 +48,29 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Scope analytics to the caller's own company unless they are a super admin
+    const { data: membership } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    const { data: isSuperAdmin } = await supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", authUser.id)
+      .eq("role", "super_admin")
+      .limit(1)
+      .maybeSingle();
+    if (isSuperAdmin == null) {
+      // fall through: treat as non-super-admin
+    }
+    if (membership?.company_id !== company_id && isSuperAdmin == null) {
+      return new Response(
+        JSON.stringify({ success: false, error: "You can only request analytics for your own company" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Default to last 30 days if not specified
     const startDate = period_start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

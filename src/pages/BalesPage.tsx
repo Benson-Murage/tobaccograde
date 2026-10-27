@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useBales } from "@/hooks/useBales";
+import { useDisputes } from "@/hooks/useDisputes";
+import { RaiseDisputeDialog } from "@/components/disputes/RaiseDisputeDialog";
+import type { Bale } from "@/hooks/useBales";
 import {
   Search,
   Package,
@@ -15,7 +18,9 @@ import {
   Scale,
   Loader2,
   RefreshCw,
+  MessageSquare,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const statusStyles: Record<string, string> = {
   registered: "bg-muted text-muted-foreground",
@@ -37,7 +42,22 @@ const gradeClassStyles: Record<string, string> = {
 export default function BalesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { bales, isLoading, stats, searchBales, filterByStatus, refetch } = useBales();
+  const [disputeBale, setDisputeBale] = useState<Bale | null>(null);
+  const { bales, isLoading, stats, searchBales, filterByStatus, updateBaleStatus, refetch } = useBales();
+  const { createDispute, isProcessing } = useDisputes();
+
+  const handleDisputeSubmit = async (data: Parameters<typeof createDispute>[0]) => {
+    if (!disputeBale) return { success: false, error: "No bale selected" };
+    const result = await createDispute(data);
+    if (result.success) {
+      await updateBaleStatus(disputeBale.id, "disputed");
+      toast.success(`Dispute raised for ${disputeBale.bale_code}`, {
+        description: "A supervisor will review the contested grade",
+      });
+      await refetch();
+    }
+    return result;
+  };
 
   const getFilteredBales = () => {
     let result = bales;
@@ -192,6 +212,9 @@ export default function BalesPage() {
                     <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
                       Warehouse
                     </th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -246,6 +269,21 @@ export default function BalesPage() {
                       <td className="px-6 py-4">
                         <span className="text-sm text-muted-foreground">{bale.warehouse_name || 'Unknown'}</span>
                       </td>
+                      <td className="px-6 py-4">
+                        {bale.status === 'graded' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDisputeBale(bale)}
+                            disabled={isProcessing}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Dispute
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -270,6 +308,19 @@ export default function BalesPage() {
             </div>
           </div>
         )}
+
+        {/* Raise Dispute Dialog */}
+        <RaiseDisputeDialog
+          open={!!disputeBale}
+          onOpenChange={(open) => { if (!open) setDisputeBale(null); }}
+          bale={disputeBale ? {
+            id: disputeBale.id,
+            bale_code: disputeBale.bale_code,
+            grade_code: disputeBale.grade_code,
+            grading_id: disputeBale.grading_id,
+          } : null}
+          onSubmit={handleDisputeSubmit}
+        />
       </div>
     </AppLayout>
   );

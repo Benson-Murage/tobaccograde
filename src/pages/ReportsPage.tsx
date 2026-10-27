@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,23 +12,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
 } from "recharts";
 
-const dailyGradingData = [
-  { date: "Jan 6", bales: 720, value: 98400 },
-  { date: "Jan 7", bales: 680, value: 89200 },
-  { date: "Jan 8", bales: 890, value: 118500 },
-  { date: "Jan 9", bales: 756, value: 102300 },
-  { date: "Jan 10", bales: 845, value: 125600 },
-  { date: "Jan 11", bales: 920, value: 134200 },
-  { date: "Jan 12", bales: 847, value: 128450 },
-];
-
-const graderPerformance = [
-  { name: "James Mwale", bales: 245, accuracy: 98.2, avgTime: 1.8 },
-  { name: "Mary Banda", bales: 198, accuracy: 97.5, avgTime: 2.1 },
-  { name: "Peter Lungu", bales: 156, accuracy: 99.1, avgTime: 1.9 },
-  { name: "Grace Tembo", bales: 134, accuracy: 96.8, avgTime: 2.3 },
-];
-
 const reports = [
   { name: "Daily Grading Summary", description: "Complete breakdown of today's grading activities", icon: BarChart3, type: "grading_summary" },
   { name: "Farmer Payment Report", description: "Payment calculations for all graded bales", icon: DollarSign, type: "farmer_payment" },
@@ -41,6 +24,92 @@ const reports = [
 export default function ReportsPage() {
   const { companyId } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
+  const [dailyGradingData, setDailyGradingData] = useState<{ date: string; bales: number; value: number }[]>([]);
+  const [graderPerformance, setGraderPerformance] = useState<{ name: string; bales: number; accuracy: number | null; avgTime: number | null }[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!companyId) return;
+      setIsLoadingData(true);
+      try {
+        const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+        const query = supabase
+          .from('gradings')
+          .select('id, graded_at, grader_id, grading_prices(total_value), ai_grader_decisions(overall_decision, decision_time_seconds)')
+          .gte('graded_at', weekAgo)
+          .order('graded_at', { ascending: false })
+          .limit(2000);
+        if (companyId) query.eq('company_id', companyId);
+        const { data, error } = await query;
+        if (error) throw error;
+        const gradings = (data || []) as any[];
+
+        // Daily buckets for the last 7 days
+        const buckets = new Map<string, { bales: number; value: number }>();
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(Date.now() - i * 86400000);
+          buckets.set(d.toISOString().slice(0, 10), { bales: 0, value: 0 });
+        }
+        gradings.forEach((g) => {
+          const day = g.graded_at.slice(0, 10);
+          const bucket = buckets.get(day);
+          if (bucket) {
+            bucket.bales += 1;
+            bucket.value += Number(g.grading_prices?.[0]?.total_value || 0);
+          }
+        });
+        setDailyGradingData(
+          Array.from(buckets.entries()).map(([day, v]) => ({
+            date: new Date(day + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            ...v,
+          }))
+        );
+
+        // Per-grader metrics for the same window
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('company_id', companyId);
+        const nameById = new Map((profileRows || []).map((p: any) => [p.id, p.full_name]));
+        const byGrader = new Map<string, { bales: number; decisions: number; accepted: number; timeSum: number; timeCount: number }>();
+        gradings.forEach((g) => {
+          const entry = byGrader.get(g.grader_id) || { bales: 0, decisions: 0, accepted: 0, timeSum: 0, timeCount: 0 };
+          entry.bales += 1;
+          const dec = g.ai_grader_decisions?.[0];
+          if (dec) {
+            entry.decisions += 1;
+            if (dec.overall_decision === 'accepted') entry.accepted += 1;
+            if (dec.decision_time_seconds != null) {
+              entry.timeSum += dec.decision_time_seconds;
+              entry.timeCount += 1;
+            }
+          }
+          byGrader.set(g.grader_id, entry);
+        });
+        setGraderPerformance(
+          Array.from(byGrader.entries()).map(([id, e]) => ({
+            name: nameById.get(id) || 'Unknown grader',
+            bales: e.bales,
+            accuracy: e.decisions > 0 ? Math.round((e.accepted / e.decisions) * 1000) / 10 : null,
+            avgTime: e.timeCount > 0 ? Math.round((e.timeSum / e.timeCount) * 10) / 10 : null,
+          })).sort((a, b) => b.bales - a.bales)
+        );
+      } catch (err) {
+        console.error('Failed to load report data:', err);
+        toast.error('Failed to load report metrics');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    loadDashboardData();
+  }, [companyId]);
+
+  // Proper RFC-4180 field escaping: quotes, commas, and newlines inside values
+  const csvField = (value: unknown): string => {
+    const s = value === null || value === undefined ? '' : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
 
   const buildCsvContent = async (type: string): Promise<string> => {
     if (type === 'grading_summary' || type === 'grade_distribution') {
@@ -53,7 +122,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Bale Code,Farmer,Grade,Grade Class,Moisture %,Defect %,Weight (kg),Graded At\n';
       (data || []).forEach((g: any) => {
-        csv += `${g.bales?.bale_code || ''},${g.bales?.farmers?.full_name || ''},${g.grade_code},${g.grade_class || ''},${g.moisture_percent || ''},${g.defect_percent || ''},${g.bales?.weight_kg || ''},${g.graded_at}\n`;
+        csv += [g.bales?.bale_code, g.bales?.farmers?.full_name, g.grade_code, g.grade_class, g.moisture_percent, g.defect_percent, g.bales?.weight_kg, g.graded_at]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'farmer_payment') {
@@ -66,7 +136,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Farmer,Farmer Code,Bale Code,Weight (kg),Status\n';
       (data || []).forEach((b: any) => {
-        csv += `${b.farmers?.full_name || ''},${b.farmers?.farmer_code || ''},${b.bale_code},${b.weight_kg},${b.status}\n`;
+        csv += [b.farmers?.full_name, b.farmers?.farmer_code, b.bale_code, b.weight_kg, b.status]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'dispute_log') {
@@ -79,7 +150,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'ID,Status,Priority,Reason,Resolution,New Grade,Raised At\n';
       (data || []).forEach((d: any) => {
-        csv += `${d.id},${d.status},${d.priority || ''},${(d.reason || '').replace(/,/g, ';')},${(d.resolution_notes || '').replace(/,/g, ';')},${d.new_grade_code || ''},${d.raised_at}\n`;
+        csv += [d.id, d.status, d.priority, d.reason, d.resolution_notes, d.new_grade_code, d.raised_at]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'grader_performance') {
@@ -92,7 +164,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Grader ID,Total Gradings,Consistency,AI Accept %,AI Modify %,AI Reject %,Risk Score,Harshness,Period Start,Period End\n';
       (data || []).forEach((g: any) => {
-        csv += `${g.grader_id},${g.total_gradings},${g.consistency_score || ''},${g.ai_accept_rate || ''},${g.ai_modify_rate || ''},${g.ai_reject_rate || ''},${g.risk_score || ''},${g.harshness_score || ''},${g.period_start},${g.period_end}\n`;
+        csv += [g.grader_id, g.total_gradings, g.consistency_score, g.ai_accept_rate, g.ai_modify_rate, g.ai_reject_rate, g.risk_score, g.harshness_score, g.period_start, g.period_end]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     } else if (type === 'seasonal_summary') {
@@ -105,7 +178,8 @@ export default function ReportsPage() {
       const { data } = await query;
       let csv = 'Bale Code,Farmer,Warehouse,Weight (kg),Status,Registered At\n';
       (data || []).forEach((b: any) => {
-        csv += `${b.bale_code},${b.farmers?.full_name || ''},${b.warehouses?.name || ''},${b.weight_kg},${b.status},${b.registered_at}\n`;
+        csv += [b.bale_code, b.farmers?.full_name, b.warehouses?.name, b.weight_kg, b.status, b.registered_at]
+          .map(csvField).join(',') + '\n';
       });
       return csv;
     }
@@ -180,6 +254,8 @@ export default function ReportsPage() {
     }
   }, [companyId]);
 
+  const maxBales = graderPerformance.reduce((m, g) => Math.max(m, g.bales), 0);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -188,12 +264,9 @@ export default function ReportsPage() {
             <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
             <p className="text-muted-foreground">Generate and export detailed operational reports</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline"><Calendar className="h-4 w-4 mr-2" />Date Range</Button>
-            <Button variant="enterprise" onClick={() => exportReport('grading_summary', 'csv')}>
-              <Download className="h-4 w-4 mr-2" />Export All
-            </Button>
-          </div>
+          <Button variant="enterprise" onClick={() => exportReport('grading_summary', 'csv')}>
+            <Download className="h-4 w-4 mr-2" />Export All
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -244,7 +317,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {graderPerformance.map((grader) => (
+                {graderPerformance.length === 0 && !isLoadingData ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-muted-foreground">No gradings recorded in the last 7 days.</td></tr>
+                ) : graderPerformance.map((grader) => (
                   <tr key={grader.name} className="hover:bg-muted/20 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -255,19 +330,27 @@ export default function ReportsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4"><span className="text-lg font-bold text-foreground">{grader.bales}</span></td>
-                    <td className="px-6 py-4">
-                      <span className={`font-semibold ${grader.accuracy >= 98 ? 'text-success' : grader.accuracy >= 96 ? 'text-primary' : 'text-warning'}`}>
-                        {grader.accuracy}%
+                  <td className="px-6 py-4">
+                    {grader.accuracy === null ? (
+                      <span className="text-sm text-muted-foreground">No AI reviews</span>
+                    ) : (
+                      <span className={`font-semibold ${grader.accuracy >= 90 ? 'text-success' : grader.accuracy >= 70 ? 'text-primary' : 'text-warning'}`}>
+                        {grader.accuracy}% AI agreement
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {grader.avgTime === null ? (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    ) : (
                       <span className={`font-medium ${grader.avgTime <= 2 ? 'text-success' : 'text-warning'}`}>{grader.avgTime}s</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-primary rounded-full h-2 transition-all" style={{ width: `${(grader.bales / 245) * 100}%` }} />
-                      </div>
-                    </td>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="w-24 bg-muted rounded-full h-2">
+                      <div className="bg-primary rounded-full h-2 transition-all" style={{ width: `${maxBales ? (grader.bales / maxBales) * 100 : 0}%` }} />
+                    </div>
+                  </td>
                   </tr>
                 ))}
               </tbody>

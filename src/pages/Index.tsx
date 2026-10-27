@@ -85,8 +85,8 @@ export default function Index() {
               <ClipboardCheck className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats.gradingAccuracy}%</p>
-              <p className="text-sm text-muted-foreground">Grading Accuracy</p>
+              <p className="text-2xl font-bold text-foreground">{stats.aiAgreement === null ? '—' : `${stats.aiAgreement}%`}</p>
+              <p className="text-sm text-muted-foreground">AI Agreement (today)</p>
             </div>
           </div>
         </div>

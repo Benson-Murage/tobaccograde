@@ -1,0 +1,1 @@
+update public.bales set weight_kg = 45.00 where id='f1c4acdc-3e68-405b-82b8-c9ff4732506c';

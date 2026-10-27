@@ -192,20 +192,11 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
     
     if (gradingError) {
       console.error('Grading insert error:', gradingError);
-      // Fall back to offline queue
-      const syncQueueId = queueForSync('grading', gradingId, 'INSERT', {
-        grading: gradingRecord,
-        aiDecision: aiDecisionRecord,
-        price: priceRecord,
-        manualEntries: manualEntryRecords,
-      });
-      
       return {
-        success: true,
-        gradingId,
-        isOffline: true,
-        requiresApproval: submission.requiresSupervisorApproval,
-        syncQueueId,
+        success: false,
+        isOffline: false,
+        requiresApproval: false,
+        error: gradingError.message || 'Failed to save grading. Check your connection and try again.',
       };
     }
     
@@ -247,10 +238,14 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
     });
     
     // Update bale status
-    await supabase
+    const { error: baleStatusError } = await supabase
       .from('bales')
       .update({ status: 'graded' })
       .eq('id', submission.baleId);
+
+    if (baleStatusError) {
+      console.error('Bale status update error:', baleStatusError);
+    }
     
     return {
       success: true,
@@ -261,20 +256,11 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
     
   } catch (error) {
     console.error('Submission error:', error);
-    
-    // Fall back to offline queue
-    const syncQueueId = queueForSync('grading', gradingId, 'INSERT', {
-      grading: gradingRecord,
-      aiDecision: aiDecisionRecord,
-      price: priceRecord,
-    });
-    
     return {
-      success: true,
-      gradingId,
-      isOffline: true,
-      requiresApproval: submission.requiresSupervisorApproval,
-      syncQueueId,
+      success: false,
+      isOffline: false,
+      requiresApproval: false,
+      error: error instanceof Error ? error.message : 'Failed to submit grading',
     };
   }
 }

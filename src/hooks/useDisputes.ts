@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit-logger';
 import { toast } from 'sonner';
+import { createNotification } from '@/hooks/useNotifications';
 
 export interface Dispute {
   id: string;
@@ -59,30 +60,40 @@ export function useDisputes() {
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('disputes')
-        .select(`
-          *,
-          gradings (
-            grade_code,
-            bales (
-              bale_code,
-              farmers (
-                full_name,
-                farmer_code
+      // grader_id references auth.users, which has no REST embed path —
+      // fetch grader names separately to keep this query working.
+      const [disputesRes, profilesRes] = await Promise.all([
+        supabase
+          .from('disputes')
+          .select(`
+            *,
+            gradings (
+              grade_code,
+              bales (
+                bale_code,
+                farmers (
+                  full_name,
+                  farmer_code
+                )
               )
-            ),
-            profiles:grader_id (
-              full_name
             )
-          )
-        `)
-        .eq('company_id', companyId)
-        .order('raised_at', { ascending: false });
+          `)
+          .eq('company_id', companyId)
+          .order('raised_at', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('company_id', companyId),
+      ]);
 
+      const { data, error: fetchError } = disputesRes;
       if (fetchError) {
         throw fetchError;
       }
+
+      const graderNames = new Map<string, string>(
+        (profilesRes.data || []).map((p: any) => [p.id, p.full_name])
+      );
 
       const transformed: Dispute[] = (data || []).map((d: any) => ({
         id: d.id,
@@ -102,7 +113,7 @@ export function useDisputes() {
         farmer_name: d.gradings?.bales?.farmers?.full_name,
         farmer_id: d.gradings?.bales?.farmers?.farmer_code,
         original_grade: d.gradings?.grade_code,
-        grader_name: d.gradings?.profiles?.full_name,
+        grader_name: graderNames.get(d.grader_id ?? '') || graderNames.get(d.raised_by ?? ''),
       }));
 
       setDisputes(transformed);
@@ -118,6 +129,59 @@ export function useDisputes() {
   useEffect(() => {
     fetchDisputes();
   }, [fetchDisputes]);
+
+  const notifyUsers = useCallback(async (recipientIds: string[], title: string, message: string, entityId: string) => {
+    if (!companyId) return;
+    const rows = recipientIds
+      .filter(Boolean)
+      .map((userId) => ({
+        user_id: userId,
+        company_id: companyId,
+        title,
+        message,
+        type: 'dispute',
+        entity_type: 'dispute',
+        entity_id: entityId,
+        is_read: false,
+      }));
+    if (rows.length === 0) return;
+    const { error } = await supabase.from('notifications').insert(rows);
+    if (error) console.error('Failed to create notifications:', error);
+  }, [companyId]);
+
+  const getSupervisorIds = useCallback(async (): Promise<string[]> => {
+    if (!companyId) return [];
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .in('role', ['quality_supervisor', 'company_admin']);
+    if (error) {
+      console.error('Failed to load supervisors for notification:', error);
+      return [];
+    }
+    return (data || []).map((r: any) => r.user_id);
+  }, [companyId]);
+
+  // When a dispute is closed (resolved or rejected) the bale returns to its graded state
+  const revertBaleToGraded = useCallback(async (gradingId: string) => {
+    const { data, error } = await supabase
+      .from('gradings')
+      .select('bale_id')
+      .eq('id', gradingId)
+      .maybeSingle();
+    if (error || !data) {
+      console.error('Could not resolve bale for dispute closure:', error);
+      return;
+    }
+    const { error: baleError } = await supabase
+      .from('bales')
+      .update({ status: 'graded' })
+      .eq('id', data.bale_id);
+    if (baleError) {
+      console.error('Failed to return disputed bale to graded state:', baleError);
+    }
+  }, []);
 
   const createDispute = async (formData: DisputeFormData): Promise<{ success: boolean; dispute?: Dispute; error?: string }> => {
     if (!user) {
@@ -153,6 +217,14 @@ export function useDisputes() {
         entity_id: data.id,
         new_values: { ...formData } as Record<string, unknown>,
       });
+
+      const supervisorIds = await getSupervisorIds();
+      await notifyUsers(
+        supervisorIds.filter((sid) => sid !== user.id),
+        'New dispute requires review',
+        `A grading dispute was raised: ${formData.reason}`,
+        data.id
+      );
 
       await fetchDisputes();
       return { success: true, dispute: data };
@@ -210,6 +282,7 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
+      const raiserId = disputes.find((d) => d.id === id)?.raised_by;
       const { error: updateError } = await supabase
         .from('disputes')
         .update({
@@ -231,6 +304,16 @@ export function useDisputes() {
         entity_id: id,
         new_values: { status: 'resolved', ...resolution },
       });
+
+      await notifyUsers(
+        raiserId && raiserId !== user.id ? [raiserId] : [],
+        'Dispute resolved',
+        `Your dispute was resolved: ${resolution.notes}`,
+        id
+      );
+
+      const gradingId = disputes.find((d) => d.id === id)?.grading_id;
+      if (gradingId) await revertBaleToGraded(gradingId);
 
       setDisputes(prev => prev.map(d => 
         d.id === id ? {
@@ -260,6 +343,7 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
+      const raiserId = disputes.find((d) => d.id === id)?.raised_by;
       const { error: updateError } = await supabase
         .from('disputes')
         .update({
@@ -280,6 +364,16 @@ export function useDisputes() {
         entity_id: id,
         new_values: { status: 'closed', rejection_reason: reason },
       });
+
+      await notifyUsers(
+        raiserId && raiserId !== user.id ? [raiserId] : [],
+        'Dispute rejected',
+        `Your dispute was rejected: ${reason}`,
+        id
+      );
+
+      const gradingId = disputes.find((d) => d.id === id)?.grading_id;
+      if (gradingId) await revertBaleToGraded(gradingId);
 
       setDisputes(prev => prev.map(d => 
         d.id === id ? { 

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { logAudit } from "@/lib/audit-logger";
 import { format } from "date-fns";
+import { AddBalesToBatchDialog } from "@/components/export/AddBalesToBatchDialog";
 import {
   FileCheck,
   Plus,
@@ -20,6 +21,8 @@ import {
   Ship,
   Download,
   Eye,
+  Package,
+  XCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -39,6 +42,7 @@ interface ExportBatch {
   certificate_number: string | null;
   destination_country: string | null;
   buyer_name: string | null;
+  warehouse_id: string;
   created_at: string;
   certified_at: string | null;
 }
@@ -70,6 +74,8 @@ export default function ExportCertificationPage() {
   const [saving, setSaving] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
+  const [addBalesOpen, setAddBalesOpen] = useState(false);
+  const [addBalesBatch, setAddBalesBatch] = useState<ExportBatch | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -95,25 +101,58 @@ export default function ExportCertificationPage() {
     if (!form.batch_code || !selectedWarehouse || !companyId) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("export_batches").insert({
+      const { data: created, error } = await supabase.from("export_batches").insert({
         company_id: companyId,
         warehouse_id: selectedWarehouse,
         batch_code: form.batch_code,
         destination_country: form.destination_country || null,
         buyer_name: form.buyer_name || null,
         created_by: user?.id,
-      });
+      }).select().single();
       if (error) throw error;
       toast.success("Export batch created");
-      logAudit({ action: "CREATE", entity_type: "bale", new_values: { batch_code: form.batch_code, type: "export_batch" } });
+      logAudit({
+        action: "CREATE",
+        entity_type: "export_batch",
+        entity_id: created.id,
+        new_values: { batch_code: form.batch_code, warehouse_id: selectedWarehouse },
+      });
       setDialogOpen(false);
       setForm({ batch_code: "", destination_country: "", buyer_name: "" });
       setSelectedWarehouse("");
       fetchData();
     } catch (err: any) {
-      toast.error(err.message || "Failed to create batch");
+      const msg = err?.message || "Failed to create batch";
+      toast.error(/duplicate key/i.test(msg)
+        ? "A batch with this code already exists for your company"
+        : msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRecordInspection = async (batch: ExportBatch, passed: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("export_batches")
+        .update({
+          inspection_status: passed ? "passed" : "failed",
+          inspected_by: user?.id,
+          inspected_at: new Date().toISOString(),
+          status: passed ? "inspected" : "rejected",
+        })
+        .eq("id", batch.id);
+      if (error) throw error;
+      toast.success(passed ? "Inspection recorded: passed" : "Inspection recorded: failed");
+      logAudit({
+        action: passed ? "INSPECT_PASS" : "INSPECT_FAIL",
+        entity_type: "export_batch",
+        entity_id: batch.id,
+        new_values: { inspection_status: passed ? "passed" : "failed" },
+      });
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to record inspection");
     }
   };
 
@@ -132,7 +171,7 @@ export default function ExportCertificationPage() {
         .eq("id", batch.id);
       if (error) throw error;
       toast.success(`Batch certified: ${certNumber}`);
-      logAudit({ action: "APPROVE", entity_type: "bale", entity_id: batch.id, new_values: { certificate_number: certNumber, type: "export_certification" } });
+      logAudit({ action: "APPROVE", entity_type: "export_batch", entity_id: batch.id, new_values: { certificate_number: certNumber, type: "export_certification" } });
       fetchData();
     } catch (err: any) {
       toast.error(err.message);
@@ -285,15 +324,28 @@ export default function ExportCertificationPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setAddBalesBatch(batch); setAddBalesOpen(true); }}>
+                      <Package className="h-4 w-4 mr-1" /> Add Bales
+                    </Button>
                     {batch.status === "draft" && (
-                      <Button variant="outline" size="sm" onClick={() => {
+                      <Button variant="outline" size="sm" disabled={batch.total_bales === 0} onClick={() => {
                         supabase.from("export_batches").update({ status: "pending_inspection" }).eq("id", batch.id)
                           .then(() => { toast.success("Submitted for inspection"); fetchData(); });
                       }}>
                         Submit for Inspection
                       </Button>
                     )}
-                    {(batch.status === "pending_inspection" || batch.status === "inspected") && (
+                    {batch.status === "pending_inspection" && (
+                      <>
+                        <Button variant="enterprise" size="sm" onClick={() => handleRecordInspection(batch, true)}>
+                          <CheckCircle className="h-4 w-4 mr-1" /> Pass Inspection
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleRecordInspection(batch, false)}>
+                          <XCircle className="h-4 w-4 mr-1" /> Fail
+                        </Button>
+                      </>
+                    )}
+                    {batch.status === "inspected" && batch.inspection_status === "passed" && (
                       <Button variant="enterprise" size="sm" onClick={() => handleCertify(batch)}>
                         <CheckCircle className="h-4 w-4 mr-1" /> Certify
                       </Button>
@@ -310,6 +362,13 @@ export default function ExportCertificationPage() {
           </div>
         )}
       </div>
+
+      <AddBalesToBatchDialog
+        open={addBalesOpen}
+        onOpenChange={setAddBalesOpen}
+        batch={addBalesBatch ? { id: addBalesBatch.id, batch_code: addBalesBatch.batch_code, warehouse_id: addBalesBatch.warehouse_id, company_id: companyId || "" } : null}
+        onSaved={fetchData}
+      />
     </AppLayout>
   );
 }
