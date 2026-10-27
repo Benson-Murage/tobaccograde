@@ -221,13 +221,19 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
       const predictionRecord: Record<string, unknown> = {
         company_id: submission.companyId,
         grading_id: gradingId,
-        ai_model_id: submission.aiPrediction.modelId || null,
+        // ai_model_id references the company's registered ai_models row; the runtime
+        // model identifier is kept in raw_response instead of forcing it into the UUID
+        ai_model_id: null,
         suggested_grade: submission.aiPrediction.suggestedGrade,
         suggested_grade_class: submission.aiPrediction.suggestedGradeClass || null,
         overall_confidence: submission.aiPrediction.overallConfidence ?? null,
         processing_time_ms: submission.aiPrediction.processingTimeMs ?? null,
         explanation: p.overall_explanation ?? null,
         key_factors: p.key_factors ?? [],
+        raw_response: {
+          model_used: submission.aiPrediction.modelId || null,
+          analysis: p,
+        },
       };
       if (p.color) {
         predictionRecord.suggested_color = p.color.value;
