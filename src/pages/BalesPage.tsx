@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useBales } from "@/hooks/useBales";
+import { useDisputes } from "@/hooks/useDisputes";
+import { RaiseDisputeDialog } from "@/components/disputes/RaiseDisputeDialog";
+import type { Bale } from "@/hooks/useBales";
 import {
   Search,
   Package,
@@ -15,7 +18,9 @@ import {
   Scale,
   Loader2,
   RefreshCw,
+  MessageSquare,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const statusStyles: Record<string, string> = {
   registered: "bg-muted text-muted-foreground",
@@ -37,7 +42,22 @@ const gradeClassStyles: Record<string, string> = {
 export default function BalesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { bales, isLoading, stats, searchBales, filterByStatus, refetch } = useBales();
+  const [disputeBale, setDisputeBale] = useState<Bale | null>(null);
+  const { bales, isLoading, stats, searchBales, filterByStatus, updateBaleStatus, refetch } = useBales();
+  const { createDispute, isProcessing } = useDisputes();
+
+  const handleDisputeSubmit = async (data: Parameters<typeof createDispute>[0]) => {
+    if (!disputeBale) return { success: false, error: "No bale selected" };
+    const result = await createDispute(data);
+    if (result.success) {
+      await updateBaleStatus(disputeBale.id, "disputed");
+      toast.success(`Dispute raised for ${disputeBale.bale_code}`, {
+        description: "A supervisor will review the contested grade",
+      });
+      await refetch();
+    }
+    return result;
+  };
 
   const getFilteredBales = () => {
     let result = bales;
