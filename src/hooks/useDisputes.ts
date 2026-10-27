@@ -262,6 +262,7 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
+      const raiserId = disputes.find((d) => d.id === id)?.raised_by;
       const { error: updateError } = await supabase
         .from('disputes')
         .update({
@@ -283,6 +284,13 @@ export function useDisputes() {
         entity_id: id,
         new_values: { status: 'resolved', ...resolution },
       });
+
+      await notifyUsers(
+        raiserId && raiserId !== user.id ? [raiserId] : [],
+        'Dispute resolved',
+        `Your dispute was resolved: ${resolution.notes}`,
+        id
+      );
 
       setDisputes(prev => prev.map(d => 
         d.id === id ? {
@@ -312,6 +320,7 @@ export function useDisputes() {
     setIsProcessing(true);
 
     try {
+      const raiserId = disputes.find((d) => d.id === id)?.raised_by;
       const { error: updateError } = await supabase
         .from('disputes')
         .update({
@@ -332,6 +341,13 @@ export function useDisputes() {
         entity_id: id,
         new_values: { status: 'closed', rejection_reason: reason },
       });
+
+      await notifyUsers(
+        raiserId && raiserId !== user.id ? [raiserId] : [],
+        'Dispute rejected',
+        `Your dispute was rejected: ${reason}`,
+        id
+      );
 
       setDisputes(prev => prev.map(d => 
         d.id === id ? { 
