@@ -372,6 +372,9 @@ export function useDisputes() {
         id
       );
 
+      const gradingId = disputes.find((d) => d.id === id)?.grading_id;
+      if (gradingId) await revertBaleToGraded(gradingId);
+
       setDisputes(prev => prev.map(d => 
         d.id === id ? { 
           ...d, 
