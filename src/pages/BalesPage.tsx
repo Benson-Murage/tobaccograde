@@ -308,6 +308,19 @@ export default function BalesPage() {
             </div>
           </div>
         )}
+
+        {/* Raise Dispute Dialog */}
+        <RaiseDisputeDialog
+          open={!!disputeBale}
+          onOpenChange={(open) => { if (!open) setDisputeBale(null); }}
+          bale={disputeBale ? {
+            id: disputeBale.id,
+            bale_code: disputeBale.bale_code,
+            grade_code: disputeBale.grade_code,
+            grading_id: disputeBale.grading_id,
+          } : null}
+          onSubmit={handleDisputeSubmit}
+        />
       </div>
     </AppLayout>
   );
