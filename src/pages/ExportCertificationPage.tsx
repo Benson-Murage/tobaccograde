@@ -99,17 +99,22 @@ export default function ExportCertificationPage() {
     if (!form.batch_code || !selectedWarehouse || !companyId) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("export_batches").insert({
+      const { data: created, error } = await supabase.from("export_batches").insert({
         company_id: companyId,
         warehouse_id: selectedWarehouse,
         batch_code: form.batch_code,
         destination_country: form.destination_country || null,
         buyer_name: form.buyer_name || null,
         created_by: user?.id,
-      });
+      }).select().single();
       if (error) throw error;
       toast.success("Export batch created");
-      logAudit({ action: "CREATE", entity_type: "bale", new_values: { batch_code: form.batch_code, type: "export_batch" } });
+      logAudit({
+        action: "CREATE",
+        entity_type: "export_batch",
+        entity_id: created.id,
+        new_values: { batch_code: form.batch_code, warehouse_id: selectedWarehouse },
+      });
       setDialogOpen(false);
       setForm({ batch_code: "", destination_country: "", buyer_name: "" });
       setSelectedWarehouse("");
@@ -118,6 +123,31 @@ export default function ExportCertificationPage() {
       toast.error(err.message || "Failed to create batch");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRecordInspection = async (batch: ExportBatch, passed: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("export_batches")
+        .update({
+          inspection_status: passed ? "passed" : "failed",
+          inspected_by: user?.id,
+          inspected_at: new Date().toISOString(),
+          status: passed ? "inspected" : "rejected",
+        })
+        .eq("id", batch.id);
+      if (error) throw error;
+      toast.success(passed ? "Inspection recorded: passed" : "Inspection recorded: failed");
+      logAudit({
+        action: passed ? "INSPECT_PASS" : "INSPECT_FAIL",
+        entity_type: "export_batch",
+        entity_id: batch.id,
+        new_values: { inspection_status: passed ? "passed" : "failed" },
+      });
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to record inspection");
     }
   };
 
@@ -136,7 +166,7 @@ export default function ExportCertificationPage() {
         .eq("id", batch.id);
       if (error) throw error;
       toast.success(`Batch certified: ${certNumber}`);
-      logAudit({ action: "APPROVE", entity_type: "bale", entity_id: batch.id, new_values: { certificate_number: certNumber, type: "export_certification" } });
+      logAudit({ action: "APPROVE", entity_type: "export_batch", entity_id: batch.id, new_values: { certificate_number: certNumber, type: "export_certification" } });
       fetchData();
     } catch (err: any) {
       toast.error(err.message);
