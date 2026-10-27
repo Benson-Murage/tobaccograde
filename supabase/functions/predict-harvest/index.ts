@@ -81,8 +81,32 @@ const PREDICTION_FUNCTION = {
   }
 };
 
+
+// Verify the caller's JWT; requests without a valid session are rejected
+async function verifyUser(req: Request): Promise<{ id: string } | null> {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !anonKey) return null;
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { Authorization: authHeader, apikey: anonKey },
+  });
+  if (!res.ok) return null;
+  const user = await res.json();
+  return user?.id ? { id: user.id } : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const authUser = await verifyUser(req);
+  if (!authUser) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Authentication required" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   const startTime = Date.now();
 
