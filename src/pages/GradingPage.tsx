@@ -462,6 +462,8 @@ export default function GradingPage() {
         setHardwareWeight(null);
         setHardwareMoisture(null);
         setCapturedImage(null);
+        setCapturedImagePath(null);
+        setAiAnalysisRaw(null);
         setAiSuggestions([]);
         setAiDecisions({});
         setPosition(null);
@@ -592,6 +594,8 @@ export default function GradingPage() {
                 className="absolute top-2 right-2"
                 onClick={() => {
                   setCapturedImage(null);
+                  setCapturedImagePath(null);
+                  setAiAnalysisRaw(null);
                   setAiSuggestions([]);
                   setAiDecisions({});
                 }}
