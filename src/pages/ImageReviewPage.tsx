@@ -68,11 +68,22 @@ export default function ImageReviewPage() {
         .order('captured_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const transformed: GradingImage[] = (data || []).map((img: any) => ({
-        id: img.id,
-        image_url: img.image_url,
+        // Images are stored as private-bucket paths; create short-lived signed URLs to render them
+        const urls = await Promise.all((data || []).map(async (img: any) => {
+          if (!img.image_url || img.image_url.startsWith('http') || img.image_url.startsWith('data:')) {
+            return img.image_url;
+          }
+          const { data: urlData } = await supabase.storage
+            .from('grading-images')
+            .createSignedUrl(img.image_url, 3600);
+          return urlData?.signedUrl || img.image_url;
+        }));
+
+        const transformed: GradingImage[] = (data || []).map((img: any, i: number) => ({
+          id: img.id,
+          image_url: urls[i],
         image_type: img.image_type,
         captured_at: img.captured_at,
         device_id: img.device_id,
