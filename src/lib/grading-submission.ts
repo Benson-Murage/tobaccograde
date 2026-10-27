@@ -69,6 +69,8 @@ export interface SubmissionResult {
   requiresApproval: boolean;
   syncQueueId?: string;
   error?: string;
+  /** Non-fatal persistence problems (e.g. AI records failed to save) shown to the user */
+  warnings?: string[];
 }
 
 /**
