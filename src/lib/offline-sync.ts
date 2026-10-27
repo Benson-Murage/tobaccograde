@@ -130,7 +130,17 @@ async function syncGrading(payload: {
   grading: Record<string, unknown>;
   aiDecision: Record<string, unknown> | null;
   price: Record<string, unknown> | null;
-  submission: { baleId: string };
+  submission: {
+    baleId: string;
+    aiPrediction?: {
+      suggestedGrade: string;
+      suggestedGradeClass?: string;
+      overallConfidence?: number;
+      processingTimeMs?: number;
+      modelId?: string | null;
+      raw: Record<string, unknown>;
+    };
+  };
 }): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
