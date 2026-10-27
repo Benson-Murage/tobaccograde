@@ -318,7 +318,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {graderPerformance.map((grader) => (
+                {graderPerformance.length === 0 && !isLoadingData ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-muted-foreground">No gradings recorded in the last 7 days.</td></tr>
+                ) : graderPerformance.map((grader) => (
                   <tr key={grader.name} className="hover:bg-muted/20 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
