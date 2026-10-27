@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { logAudit } from "@/lib/audit-logger";
 import { format } from "date-fns";
+import { AddBalesToBatchDialog } from "@/components/export/AddBalesToBatchDialog";
 import {
   FileCheck,
   Plus,
@@ -20,6 +21,8 @@ import {
   Ship,
   Download,
   Eye,
+  Package,
+  XCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -39,6 +42,7 @@ interface ExportBatch {
   certificate_number: string | null;
   destination_country: string | null;
   buyer_name: string | null;
+  warehouse_id: string;
   created_at: string;
   certified_at: string | null;
 }
