@@ -103,12 +103,14 @@ export async function submitGrading(submission: GradingSubmission): Promise<Subm
     sync_status: (isOnline() ? 'synced' : 'pending') as 'synced' | 'pending',
     is_locked: false,
     graded_at: new Date().toISOString(),
+    photo_urls: submission.capturedImageUrl ? [submission.capturedImageUrl] : null,
   };
   
-  // Prepare AI decision record if AI was used
+  // Prepare AI decision record if AI was used.
+  // ai_prediction_id is filled after the ai_predictions row is inserted below.
   const aiDecisionRecord = submission.aiDecisions ? {
     company_id: submission.companyId,
-    ai_prediction_id: crypto.randomUUID(),
+    ai_prediction_id: '',
     grading_id: gradingId,
     grader_id: '', // Will be set from auth
     ai_suggested_grade: submission.aiSuggestedGrade,
