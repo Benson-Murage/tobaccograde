@@ -95,6 +95,44 @@ export default function GradingPage() {
   const [overallConfidence, setOverallConfidence] = useState<number | undefined>();
   const [aiExplanation, setAiExplanation] = useState<string | undefined>();
 
+  // Active price list — bale value must come from the configured price rule
+  const [activePriceMatrix, setActivePriceMatrix] = useState<Record<string, number> | null>(null);
+  const [priceMatrixCurrency, setPriceMatrixCurrency] = useState<string>('USD');
+  const [priceMatrixChecked, setPriceMatrixChecked] = useState(false);
+
+  useEffect(() => {
+    const loadPriceMatrix = async () => {
+      setPriceMatrixChecked(false);
+      if (!companyId) {
+        setActivePriceMatrix(null);
+        setPriceMatrixChecked(true);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('price_matrices')
+        .select('prices, currency')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error('Failed to load price matrix:', error);
+        setActivePriceMatrix(null);
+      } else if (data) {
+        const prices = (data.prices as Record<string, { price: number }>) || {};
+        setActivePriceMatrix(
+          Object.fromEntries(Object.entries(prices).map(([grade, v]) => [grade, Number(v.price)]))
+        );
+        if (data.currency) setPriceMatrixCurrency(data.currency);
+      } else {
+        setActivePriceMatrix(null);
+      }
+      setPriceMatrixChecked(true);
+    };
+    loadPriceMatrix();
+  }, [companyId]);
+
   // Manual selections (used when AI rejected or for manual grading)
   const [position, setPosition] = useState<LeafPosition | null>(null);
   const [color, setColor] = useState<TobaccoColor | null>(null);
@@ -246,23 +284,38 @@ export default function GradingPage() {
     return { grade: gradeCode.fullCode, class: eligibility.suggestedClass, eligibility };
   }, [position, color, texture, maturity, moisturePercent, defectPercent]);
 
-  // Calculate price breakdown
+  // Calculate price from the company's active price list.
+  // The grade's configured price is the unit price; no fabricated fallback.
   const priceBreakdown = useMemo(() => {
-    if (!position || !color || !texture || !gradeResult || moisturePercent === null || defectPercent === null) {
-      return null;
-    }
+    if (!gradeResult || !activePriceMatrix) return null;
+    const unitPrice = activePriceMatrix[gradeResult.grade];
+    if (unitPrice === undefined || unitPrice === null || unitPrice < 0) return null;
 
-    return calculateTobaccoPrice({
-      basePrice: 4.50,
-      position,
-      color,
-      texture,
-      qualityBand: gradeResult.eligibility?.suggestedQualityBand || 2,
-      moisturePercent,
-      defectPercent,
-      weightKg: hardwareWeight?.value || 0,
-    });
-  }, [position, color, texture, gradeResult, moisturePercent, defectPercent]);
+    const weightKg = hardwareWeight?.value || 0;
+    return {
+      basePrice: unitPrice,
+      positionAdjustment: 0,
+      colorAdjustment: 0,
+      textureAdjustment: 0,
+      qualityAdjustment: 0,
+      moisturePenalty: 0,
+      defectPenalty: 0,
+      finalPricePerKg: unitPrice,
+      totalValue: Math.round(unitPrice * weightKg * 100) / 100,
+      currency: priceMatrixCurrency,
+      factors: [{
+        factor: 'Active price list',
+        description: `Grade ${gradeResult.grade} configured at ${unitPrice.toFixed(2)} ${priceMatrixCurrency}/kg`,
+        impact: 0,
+        percentage: 0,
+      }],
+    };
+  }, [gradeResult, activePriceMatrix, hardwareWeight, priceMatrixCurrency]);
+
+  const gradeMissingFromPriceList = !!gradeResult && !!activePriceMatrix &&
+    activePriceMatrix[gradeResult.grade] === undefined;
+  const cannotPrice = !!gradeResult && priceMatrixChecked &&
+    (activePriceMatrix === null || gradeMissingFromPriceList);
 
   const gradeClassColors = {
     premium: "bg-success text-success-foreground",
