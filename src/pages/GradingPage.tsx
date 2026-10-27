@@ -270,6 +270,7 @@ export default function GradingPage() {
         setProcessingTimeMs(analysis.processing_time_ms);
         setOverallConfidence(analysis.suggested_grade?.confidence);
         setAiExplanation(analysis.overall_explanation);
+        setAiAnalysisRaw(analysis);
 
         // Initialize all as pending
         const initialDecisions: Record<string, AIDecision> = {};
