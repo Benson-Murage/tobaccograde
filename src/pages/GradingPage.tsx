@@ -451,6 +451,11 @@ export default function GradingPage() {
       const result = await submitGrading(submission);
 
       if (result.success) {
+        if (result.warnings?.length) {
+          toast.warning("Grade saved with warnings", {
+            description: result.warnings.join(" ")
+          });
+        }
         if (result.isOffline) {
           toast.info("Grading saved offline", {
             description: "Will sync when connection is restored"
