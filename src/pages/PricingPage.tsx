@@ -17,6 +17,7 @@ import {
   Loader2,
   RefreshCw,
   X,
+  AlertTriangle,
 } from "lucide-react";
 
 interface PriceRow {
