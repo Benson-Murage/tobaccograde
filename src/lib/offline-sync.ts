@@ -180,13 +180,17 @@ async function syncGrading(payload: {
     const predictionRecord: Record<string, unknown> = {
       company_id: payload.grading.company_id,
       grading_id: String(payload.grading.id),
-      ai_model_id: payload.submission.aiPrediction.modelId || null,
+      ai_model_id: null,
       suggested_grade: payload.submission.aiPrediction.suggestedGrade,
       suggested_grade_class: payload.submission.aiPrediction.suggestedGradeClass || null,
       overall_confidence: payload.submission.aiPrediction.overallConfidence ?? null,
       processing_time_ms: payload.submission.aiPrediction.processingTimeMs ?? null,
       explanation: p.overall_explanation ?? null,
       key_factors: p.key_factors ?? [],
+      raw_response: {
+        model_used: payload.submission.aiPrediction.modelId || null,
+        analysis: p,
+      },
       suggested_color: p.color?.value ?? null,
       suggested_color_confidence: p.color?.confidence ?? null,
       suggested_leaf_position: p.leaf_position?.value ?? null,
