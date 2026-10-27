@@ -50,6 +50,16 @@ export interface GradingSubmission {
   riskScore: number;
   requiresSupervisorApproval: boolean;
   notes?: string;
+
+  // Raw AI analysis persisted in ai_predictions (the record the decision links to)
+  aiPrediction?: {
+    suggestedGrade: string;
+    suggestedGradeClass?: string;
+    overallConfidence?: number;
+    processingTimeMs?: number;
+    modelId?: string | null;
+    raw: Record<string, unknown>;
+  };
 }
 
 export interface SubmissionResult {
