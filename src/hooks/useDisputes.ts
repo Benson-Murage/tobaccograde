@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit-logger';
 import { toast } from 'sonner';
+import { createNotification } from '@/hooks/useNotifications';
 
 export interface Dispute {
   id: string;
