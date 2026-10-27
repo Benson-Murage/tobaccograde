@@ -112,6 +112,21 @@ export function useDashboardStats() {
       });
       const topGrade = Object.entries(gradeMap).sort((a, b) => b[1] - a[1])[0];
 
+      // Real value + AI agreement metrics from today's gradings
+      const totalValue = gradingsData.reduce(
+        (sum, g: any) => sum + Number(g.grading_prices?.[0]?.total_value || 0), 0);
+      const avgValuePerBale = gradedCount > 0 ? Math.round((totalValue / gradedCount) * 100) / 100 : 0;
+      let aiDecisions = 0;
+      let aiAccepted = 0;
+      gradingsData.forEach((g: any) => {
+        const dec = g.ai_grader_decisions?.[0];
+        if (dec) {
+          aiDecisions += 1;
+          if (dec.overall_decision === 'accepted') aiAccepted += 1;
+        }
+      });
+      const aiAgreement = aiDecisions > 0 ? Math.round((aiAccepted / aiDecisions) * 1000) / 10 : null;
+
       const completionRate = totalBales > 0 ? Math.round((gradedCount / totalBales) * 100) : 0;
 
       setStats({
@@ -119,13 +134,13 @@ export function useDashboardStats() {
         pendingGrading,
         balesGraded: gradedCount,
         completionRate,
-        totalValue: 0, // Would come from grading_prices join
-        avgValuePerBale: 0,
+        totalValue,
+        avgValuePerBale,
         activeFarmers,
         deliveriesToday: totalBales,
         pendingDisputes,
         averageGrade: topGrade?.[0] || '--',
-        gradingAccuracy: 98.2, // Placeholder until analytics are calculated
+        aiAgreement,
       });
 
       // Transform recent gradings
@@ -143,25 +158,11 @@ export function useDashboardStats() {
           weight: g.bales?.weight_kg || 0,
         };
       });
-      setRecentGradings(recent.length > 0 ? recent : getDemoRecentGradings());
-
+      setRecentGradings(recent);
     } catch (error) {
       console.error('Dashboard stats error:', error);
-      // Fallback to demo
-      setStats({
-        totalBalesToday: 847,
-        pendingGrading: 342,
-        balesGraded: 505,
-        completionRate: 89,
-        totalValue: 128450,
-        avgValuePerBale: 254,
-        activeFarmers: 1247,
-        deliveriesToday: 156,
-        pendingDisputes: 12,
-        averageGrade: 'L2F',
-        gradingAccuracy: 98.2,
-      });
-      setRecentGradings(getDemoRecentGradings());
+      toast.error('Failed to load dashboard statistics');
+      setRecentGradings([]);
     } finally {
       setIsLoading(false);
     }
