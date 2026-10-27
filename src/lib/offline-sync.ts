@@ -139,7 +139,8 @@ async function syncGrading(payload: {
     return false;
   }
 
-  const grading = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const grading: any = {
     ...payload.grading,
     grader_id: user.id,
     graded_offline: true,
@@ -151,13 +152,13 @@ async function syncGrading(payload: {
   const { data: existing } = await supabase
     .from('gradings')
     .select('id')
-    .eq('id', grading.id as string)
+    .eq('id', String(grading.id))
     .maybeSingle();
   if (existing) {
     return true;
   }
 
-  const { error } = await supabase.from('gradings').insert([grading]);
+  const { error } = await supabase.from('gradings').insert([grading] as never);
   if (error) {
     console.error('Grading sync error:', error);
     return false;
@@ -167,24 +168,24 @@ async function syncGrading(payload: {
     const { error: aiError } = await supabase.from('ai_grader_decisions').insert([{
       ...payload.aiDecision,
       grader_id: user.id,
-    }]);
+    }] as never);
     if (aiError) console.error('AI decision sync error:', aiError);
   }
 
   if (payload.price) {
-    const { error: priceError } = await supabase.from('grading_prices').insert([payload.price]);
+    const { error: priceError } = await supabase.from('grading_prices').insert([payload.price] as never);
     if (priceError) console.error('Grading price sync error:', priceError);
   }
 
-  const companyId = payload.grading.company_id as string;
+  const companyId = String(payload.grading.company_id ?? '');
   await supabase.from('audit_logs').insert([{
-    company_id: companyId,
+    company_id: companyId || null,
     user_id: user.id,
     action: 'INSERT',
     entity_type: 'grading',
-    entity_id: grading.id,
+    entity_id: String(grading.id),
     new_values: grading,
-  }]);
+  }] as never);
 
   if (payload.submission?.baleId) {
     await supabase
@@ -206,7 +207,9 @@ async function syncItem(item: SyncQueueItem): Promise<boolean> {
       console.error('No sync handler for entity type:', item.entity_type);
       return false;
     }
-    const { error } = await supabase.from(item.entity_type).upsert([item.payload]);
+    const { error } = await supabase
+      .from(item.entity_type as string)
+      .upsert([item.payload] as never);
     if (error) {
       console.error('Sync error for item:', item.id, error);
       return false;
