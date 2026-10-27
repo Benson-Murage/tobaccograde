@@ -99,12 +99,15 @@ export function ManualEntryField({
 
   const handleManualSubmit = () => {
     if (!manualReason || !manualValue) return;
+    const num = parseFloat(manualValue);
+    if (isNaN(num) || num < min || num > max) return;
     setShowConfirmDialog(true);
   };
 
   const confirmManualEntry = () => {
     const numValue = parseFloat(manualValue);
     if (isNaN(numValue) || !manualReason) return;
+    if (numValue < min || numValue > max) return;
     onManualEntry(numValue, manualReason);
     setShowConfirmDialog(false);
     setIsManualOpen(false);

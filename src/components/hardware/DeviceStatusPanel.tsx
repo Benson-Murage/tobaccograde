@@ -141,7 +141,7 @@ export function DeviceStatusPanel({
               <h3 className="font-semibold text-foreground">Hardware Devices</h3>
             </div>
             {!bluetoothSupported ? (
-              <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Demo Mode</Badge>
+              <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Bluetooth Unavailable</Badge>
             ) : null}
             {connectionError && (
               <Badge variant="destructive" className="text-xs">{connectionError}</Badge>
@@ -180,7 +180,7 @@ export function DeviceStatusPanel({
                 size="sm"
                 variant={scale?.status === 'connected' ? 'outline' : 'default'}
                 onClick={handleConnectScale}
-                disabled={isConnectingScale || !bluetoothSupported}
+                disabled={isConnectingScale}
               >
                 {isConnectingScale ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -223,7 +223,7 @@ export function DeviceStatusPanel({
                 size="sm"
                 variant={moistureMeter?.status === 'connected' ? 'outline' : 'default'}
                 onClick={handleConnectMoisture}
-                disabled={isConnectingMoisture || !bluetoothSupported}
+                disabled={isConnectingMoisture}
               >
                 {isConnectingMoisture ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
