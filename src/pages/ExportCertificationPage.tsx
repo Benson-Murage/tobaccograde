@@ -122,7 +122,10 @@ export default function ExportCertificationPage() {
       setSelectedWarehouse("");
       fetchData();
     } catch (err: any) {
-      toast.error(err.message || "Failed to create batch");
+      const msg = err?.message || "Failed to create batch";
+      toast.error(/duplicate key/i.test(msg)
+        ? "A batch with this code already exists for your company"
+        : msg);
     } finally {
       setSaving(false);
     }
