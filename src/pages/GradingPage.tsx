@@ -5,7 +5,7 @@
  * Manual entry only when devices unavailable.
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,6 @@ import {
   TOBACCO_MATURITY,
   generateGradeCode,
   validateMoisture,
-  calculateTobaccoPrice,
   checkGradeEligibility,
   type LeafPosition,
   type TobaccoColor,
