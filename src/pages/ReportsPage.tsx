@@ -329,19 +329,27 @@ export default function ReportsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4"><span className="text-lg font-bold text-foreground">{grader.bales}</span></td>
-                    <td className="px-6 py-4">
-                      <span className={`font-semibold ${grader.accuracy >= 98 ? 'text-success' : grader.accuracy >= 96 ? 'text-primary' : 'text-warning'}`}>
-                        {grader.accuracy}%
+                  <td className="px-6 py-4">
+                    {grader.accuracy === null ? (
+                      <span className="text-sm text-muted-foreground">No AI reviews</span>
+                    ) : (
+                      <span className={`font-semibold ${grader.accuracy >= 90 ? 'text-success' : grader.accuracy >= 70 ? 'text-primary' : 'text-warning'}`}>
+                        {grader.accuracy}% AI agreement
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {grader.avgTime === null ? (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    ) : (
                       <span className={`font-medium ${grader.avgTime <= 2 ? 'text-success' : 'text-warning'}`}>{grader.avgTime}s</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-primary rounded-full h-2 transition-all" style={{ width: `${(grader.bales / 245) * 100}%` }} />
-                      </div>
-                    </td>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="w-24 bg-muted rounded-full h-2">
+                      <div className="bg-primary rounded-full h-2 transition-all" style={{ width: `${maxBales ? (grader.bales / maxBales) * 100 : 0}%` }} />
+                    </div>
+                  </td>
                   </tr>
                 ))}
               </tbody>
